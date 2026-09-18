@@ -1,0 +1,13 @@
+---
+description: After Jcat updates, rebuild mac/Windows installers and replace the local app
+alwaysApply: true
+---
+
+# Release sync
+
+When a feature, fix, or optimization in this repo is done, do not stop at source changes. Finish by shipping:
+
+1. Rebuild installers: `npm run release` (macOS dmg + Windows x64/arm64 setup, then replace `/Applications/Jcat.app`).
+2. If `release` cannot run, at least `npm run build:mac`, `npm run build:win`, then `npm run sync:app`.
+3. Quit any running Jcat first. Keep `/Applications/Jcat.app`. After installing, delete every unpackaged `dist/**/Jcat.app` (not only `mac-arm64`) and unregister them so Spotlight has a single copy. Eject mounted Jcat dmg volumes. `dist/` must contain `.metadata_never_index`.
+4. Tell Michael the new artifact paths under `dist/`.
