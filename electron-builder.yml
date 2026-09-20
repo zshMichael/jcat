@@ -8,7 +8,7 @@ files:
   - '!examples/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml,settings.json}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
   - '!.github/*'
 asarUnpack:
@@ -19,10 +19,21 @@ win:
   target:
     - nsis
 nsis:
-  artifactName: ${name}-${version}-${arch}-setup.${ext}
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  installerLanguages:
+    - zh_CN
+    - en_US
+    - ko_KR
+  artifactName: ${name}-${version}-${arch}-setup.${ext}
 mac:
   category: public.app-category.developer-tools
   icon: build/icon.icns

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { existsSync, statSync } from 'fs'
 import { writeFile } from 'fs/promises'
 import { homedir } from 'os'
@@ -6,20 +6,32 @@ import { basename, dirname, join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { abortComplete, abortDebug, complete, debugStream } from './deepseek'
-import { compileProject, runMain, scanMainClasses, stopRun } from './java'
+import {
+  compileProject,
+  runMain,
+  scanMainClasses,
+  stopRun,
+  writeStdin
+} from './java'
 import { detectToolchain } from './jdk'
 import { loadSettings, saveSettings } from './settings'
 import {
+  createEmpty,
   createFile,
   createFolder,
+  createFrq,
+  createPractice,
+  deleteEntry,
   getRoot,
   pickFolder,
   readText,
   readTree,
+  renameEntry,
   setRoot,
+  transferEntry,
   writeText
 } from './workspace'
-import type { CompleteRequest, DebugRequest } from '../shared/types'
+import type { CompleteRequest, CompileResult, DebugRequest } from '../shared/types'
 import { THEME_CARDS } from '../shared/themes'
 
 let mainWindow: BrowserWindow | null = null
@@ -44,9 +56,9 @@ function createWindow(): void {
     title: 'Jcat',
     backgroundColor: themeWindowBg(),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
-    trafficLightPosition: { x: 14, y: 12 },
+    trafficLightPosition: { x: 14, y: 18 },
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform !== 'darwin' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -56,6 +68,13 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => mainWindow?.show())
+  mainWindow.on('maximize', () => send('window:maximized', true))
+  mainWindow.on('unmaximize', () => send('window:maximized', false))
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return
+    const chord = process.platform === 'darwin' ? input.meta : input.control
+    if (chord && input.key.toLowerCase() === 'w') event.preventDefault()
+  })
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -80,6 +99,19 @@ function registerIpc(): void {
   ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized() ?? false)
   ipcMain.handle('window:setBackground', (_e, color: string) => {
     if (typeof color === 'string' && color.startsWith('#')) mainWindow?.setBackgroundColor(color)
+  })
+  ipcMain.handle('shell:openExternal', (_e, url: string) => {
+    if (typeof url !== 'string') return
+    try {
+      const parsed = new URL(url)
+      const httpsOk = parsed.protocol === 'https:' && parsed.hostname === 'platform.deepseek.com'
+      const mailOk =
+        parsed.protocol === 'mailto:' && parsed.pathname.toLowerCase() === 'zshovo@163.com'
+      if (!httpsOk && !mailOk) return
+      return shell.openExternal(parsed.toString())
+    } catch {
+      return
+    }
   })
 
   ipcMain.handle('settings:get', () => loadSettings())
@@ -135,7 +167,7 @@ function registerIpc(): void {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: '新建文件夹',
       defaultPath: getRoot() || homedir(),
-      properties: ['openDirectory', 'createDirectory']
+      properties: ['openDirectory', 'createDirectory', 'promptToCreate']
     })
     if (result.canceled || !result.filePaths[0]) return null
     const dir = result.filePaths[0]
@@ -146,19 +178,48 @@ function registerIpc(): void {
     }
     return { root: getRoot(), dir }
   })
+  ipcMain.handle('workspace:createEmpty', (_e, name: string) => {
+    const created = createEmpty(typeof name === 'string' ? name : 'untitled')
+    saveSettings({ lastRoot: created.root })
+    return created
+  })
+  ipcMain.handle('workspace:createPractice', (_e, kind: 'hello' | 'scanner') => {
+    const created = createPractice(kind)
+    saveSettings({ lastRoot: created.root })
+    return created
+  })
+  ipcMain.handle(
+    'workspace:createFrq',
+    (_e, kind: 'methods' | 'class' | 'arraylist' | 'grid') => {
+      const created = createFrq(kind)
+      saveSettings({ lastRoot: created.root })
+      return created
+    }
+  )
+  ipcMain.handle('workspace:rename', (_e, from: string, name: string) => renameEntry(from, name))
+  ipcMain.handle('workspace:delete', (_e, target: string) => {
+    deleteEntry(target)
+  })
+  ipcMain.handle('workspace:transfer', (_e, from: string, destDir: string, cut: boolean) =>
+    transferEntry(from, destDir, cut)
+  )
   ipcMain.handle('java:mains', () => {
     const root = getRoot()
     return root ? scanMainClasses(root) : []
   })
   ipcMain.handle('java:compile', () => compileProject())
-  ipcMain.handle('java:run', async (_e, mainClass?: string) => {
+  ipcMain.handle('java:run', async (_e, mainClass?: string, replay?: string) => {
     await runMain(
       mainClass,
       (stream, text) => send('java:data', { stream, text }),
-      (code) => send('java:exit', code)
+      (code) => send('java:exit', code),
+      (compiled: CompileResult) => send('java:compiled', compiled),
+      replay,
+      (event) => send('java:trace', event)
     )
   })
   ipcMain.handle('java:stop', () => stopRun())
+  ipcMain.handle('java:writeStdin', (_e, text: string) => writeStdin(typeof text === 'string' ? text : ''))
 
   ipcMain.handle('ai:complete', (_e, req: CompleteRequest) => complete(req))
   ipcMain.handle('ai:completeAbort', () => abortComplete())
@@ -192,6 +253,7 @@ function existsRoot(root: string): boolean {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.jcat.ide')
   app.setName('Jcat')
+  if (process.platform !== 'darwin') Menu.setApplicationMenu(null)
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
   registerIpc()
   createWindow()

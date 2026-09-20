@@ -16,6 +16,7 @@ export type Diagnostic = {
   file: string
   line: number
   column: number
+  endColumn?: number
   severity: 'error' | 'warning'
   message: string
 }
@@ -29,6 +30,8 @@ export type Toolchain = {
   mavenVersion: string | null
 }
 
+export type Locale = 'zh' | 'en' | 'ko'
+
 export type AppSettings = {
   apiKey: string
   completionModel: string
@@ -38,8 +41,11 @@ export type AppSettings = {
   mavenPath: string
   completionEnabled: boolean
   completionDelayMs: number
+  homeworkHideLines: boolean
+  apHintsEnabled: boolean
   lastRoot: string
   theme: ThemeId
+  locale: Locale
 }
 
 export type CompileResult = {
@@ -58,10 +64,12 @@ export type RunEvent =
 export type CompleteRequest = {
   prefix: string
   suffix: string
+  locale: Locale
 }
 
 export type CompleteResponse = {
   text: string
+  why?: string
   error?: string
 }
 
@@ -70,6 +78,11 @@ export type DebugRequest = {
   source: string
   errorOutput: string
   note: string
+  locale: Locale
+  errorLine?: number
+  errorMessage?: string
+  selectedSource?: string
+  selectedRange?: { startLine: number; endLine: number }
 }
 
 export type DebugChunk = {

@@ -4,7 +4,8 @@ import type { Diagnostic } from '@shared/types'
 export function applyMarkers(
   monaco: typeof Monaco,
   diagnostics: Diagnostic[],
-  currentPath: string | null
+  currentPath: string | null,
+  extras: Diagnostic[] = []
 ): void {
   for (const model of monaco.editor.getModels()) {
     const uriPath = model.uri.path || model.uri.fsPath || ''
@@ -16,16 +17,26 @@ export function applyMarkers(
     monaco.editor.setModelMarkers(
       model,
       'jcat',
-      related.map((d) => ({
-        startLineNumber: d.line,
-        startColumn: d.column || 1,
-        endLineNumber: d.line,
-        endColumn: 120,
-        message: d.message,
-        severity:
-          d.severity === 'warning' ? monaco.MarkerSeverity.Warning : monaco.MarkerSeverity.Error
-      }))
+      related.map((d) => toMarker(monaco, d))
     )
+    const extra = extras.filter(
+      (d) =>
+        pathsMatch(d.file, uriPath) ||
+        (currentPath && pathsMatch(d.file, currentPath) && pathsMatch(uriPath, currentPath))
+    )
+    monaco.editor.setModelMarkers(model, 'jcat-class', extra.map((d) => toMarker(monaco, d)))
+  }
+}
+
+function toMarker(monaco: typeof Monaco, d: Diagnostic): Monaco.editor.IMarkerData {
+  const start = d.column || 1
+  return {
+    startLineNumber: d.line,
+    startColumn: start,
+    endLineNumber: d.line,
+    endColumn: d.endColumn && d.endColumn > start ? d.endColumn : start + 80,
+    message: d.message,
+    severity: d.severity === 'warning' ? monaco.MarkerSeverity.Warning : monaco.MarkerSeverity.Error
   }
 }
 

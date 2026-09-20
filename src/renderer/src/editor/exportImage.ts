@@ -1,8 +1,24 @@
 import { toPng } from 'html-to-image'
 import type * as Monaco from 'monaco-editor'
-import { CatIconSvg } from '../theme/catSvg'
+import { catMarkSrc } from '../theme/CatIcon'
 
 const CHUNK = 90
+
+export type HomeworkMeta = {
+  className: string
+  fileName: string
+  compileOk: boolean | null
+  runExcerpt: string
+  hideLines: boolean
+  paper: string
+  ink: string
+  accent: string
+  muted: string
+  themeName: string
+  cardLabel: string
+  compileLabel: string
+  runLabel: string
+}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -13,7 +29,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-async function stitch(dataUrls: string[]): Promise<string> {
+async function stitch(dataUrls: string[], paper: string): Promise<string> {
   if (dataUrls.length === 1) return dataUrls[0]
   const imgs = await Promise.all(dataUrls.map(loadImage))
   const width = Math.max(...imgs.map((i) => i.width))
@@ -23,7 +39,7 @@ async function stitch(dataUrls: string[]): Promise<string> {
   canvas.height = height
   const ctx = canvas.getContext('2d')
   if (!ctx) return dataUrls[0]
-  ctx.fillStyle = '#F6F1EA'
+  ctx.fillStyle = paper
   ctx.fillRect(0, 0, width, height)
   let y = 0
   for (const img of imgs) {
@@ -33,12 +49,13 @@ async function stitch(dataUrls: string[]): Promise<string> {
   return canvas.toDataURL('image/png')
 }
 
-function numbered(html: string, start: number): string {
+function numbered(html: string, start: number, hideLines: boolean): string {
   const parts = html.split(/<br\s*\/?>/i)
   return parts
     .map((line, i) => {
       const n = start + i
-      return `<div class="export-line"><span class="n">${n}</span><span class="c">${line || '&nbsp;'}</span></div>`
+      const num = hideLines ? '' : `<span class="n">${n}</span>`
+      return `<div class="export-line">${num}<span class="c">${line || '&nbsp;'}</span></div>`
     })
     .join('')
 }
@@ -46,36 +63,51 @@ function numbered(html: string, start: number): string {
 export async function renderCodePng(
   monaco: typeof Monaco,
   code: string,
-  fileName: string
+  meta: HomeworkMeta
 ): Promise<string> {
   const host = document.getElementById('jcat-export-host')
   if (!host) throw new Error('导出画布不存在')
   const lines = code.split('\n')
   const urls: string[] = []
+  const compile =
+    meta.compileOk === null ? '' : meta.compileOk ? meta.compileLabel : meta.compileLabel
 
   for (let i = 0; i < lines.length; i += CHUNK) {
     const slice = lines.slice(i, i + CHUNK).join('\n')
     const colorized = await monaco.editor.colorize(slice, 'java', {})
     const card = document.createElement('div')
     card.className = 'export-card'
+    card.style.background = meta.paper
+    card.style.color = meta.ink
     const head =
       i === 0
-        ? `<div class="export-head">${CatIconSvg}<span>${escapeHtml(fileName)} · Jcat</span></div>`
+        ? `<div class="export-head" style="border-color:${meta.muted}">
+            <img src="${catMarkSrc}" width="22" height="22" alt=""/>
+            <div class="export-head-copy">
+              <strong>${escapeHtml(meta.cardLabel)}</strong>
+              <span>${escapeHtml(meta.className || meta.fileName)} · ${escapeHtml(meta.themeName)}</span>
+            </div>
+            ${compile ? `<em class="export-chip" style="background:${meta.accent}22;color:${meta.ink}">${escapeHtml(compile)}</em>` : ''}
+          </div>`
         : ''
-    card.innerHTML = `${head}<div class="export-code">${numbered(colorized, i + 1)}</div>`
+    const foot =
+      i + CHUNK >= lines.length && meta.runExcerpt
+        ? `<div class="export-run" style="border-color:${meta.muted}"><span>${escapeHtml(meta.runLabel)}</span><pre>${escapeHtml(meta.runExcerpt)}</pre></div>`
+        : ''
+    card.innerHTML = `${head}<div class="export-code" style="color:${meta.ink}">${numbered(colorized, i + 1, meta.hideLines)}</div>${foot}`
     host.innerHTML = ''
     host.appendChild(card)
     urls.push(
       await toPng(card, {
         pixelRatio: 2,
-        backgroundColor: '#F6F1EA',
+        backgroundColor: meta.paper,
         cacheBust: true
       })
     )
   }
 
   host.innerHTML = ''
-  return stitch(urls)
+  return stitch(urls, meta.paper)
 }
 
 function escapeHtml(text: string): string {

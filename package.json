@@ -1,10 +1,10 @@
 {
   "name": "jcat",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Jcat — a local Java IDE with DeepSeek completion and debug",
   "main": "./out/main/index.js",
   "author": "Michael",
-  "homepage": "https://github.com",
+  "homepage": "https://github.com/zshMichael/jcat",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",

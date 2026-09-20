@@ -1,10 +1,25 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from 'fs'
 import { tmpdir } from 'os'
-import { basename, delimiter, join, relative, sep } from 'path'
+import { basename, delimiter, dirname, join, relative, sep } from 'path'
 import { detectToolchain } from './jdk'
 import { getRoot } from './workspace'
 import type { CompileResult, Diagnostic, ProjectKind } from '../shared/types'
+import {
+  instrumentJava,
+  JCAT_SNAP_JAVA,
+  parseTraceLine,
+  type TraceEvent
+} from '../shared/instrumentJava'
 
 let running: ChildProcessWithoutNullStreams | null = null
 
@@ -17,7 +32,15 @@ function walkJava(dir: string, acc: string[] = []): string[] {
   }
   for (const name of names) {
     if (name === '.' || name === '..') continue
-    if (name === 'out' || name === 'target' || name === '.git' || name === 'node_modules') continue
+    if (
+      name === 'out' ||
+      name === 'target' ||
+      name === '.git' ||
+      name === 'node_modules' ||
+      name === '.jcat'
+    ) {
+      continue
+    }
     const full = join(dir, name)
     let st
     try {
@@ -88,7 +111,37 @@ function spawnEnv(javaHome: string | null): NodeJS.ProcessEnv {
     env.JAVA_HOME = javaHome
     env.PATH = `${join(javaHome, 'bin')}${delimiter}${env.PATH ?? ''}`
   }
+  if (process.platform === 'win32') {
+    const extra =
+      '-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 -Dstdin.encoding=UTF-8'
+    const prev = env.JAVA_TOOL_OPTIONS?.trim()
+    env.JAVA_TOOL_OPTIONS = prev ? `${prev} ${extra}` : extra
+  }
   return env
+}
+
+function decodeChunk(data: Buffer): string {
+  return data.toString('utf8').replace(/^Picked up JAVA_TOOL_OPTIONS:.*\r?\n/gm, '')
+}
+
+function spawnOpts(
+  command: string,
+  cwd: string,
+  env: NodeJS.ProcessEnv
+): {
+  cwd: string
+  windowsHide: true
+  env: NodeJS.ProcessEnv
+  shell: boolean
+  stdio: ['pipe', 'pipe', 'pipe']
+} {
+  return {
+    cwd,
+    windowsHide: true,
+    env,
+    shell: process.platform === 'win32' && /\.(cmd|bat)$/i.test(command),
+    stdio: ['pipe', 'pipe', 'pipe']
+  }
 }
 
 function runProcess(
@@ -98,17 +151,14 @@ function runProcess(
   javaHome: string | null
 ): Promise<{ code: number | null; output: string }> {
   return new Promise((resolve) => {
-    const child = spawn(command, args, {
-      cwd,
-      windowsHide: true,
-      env: spawnEnv(javaHome)
-    })
+    const child = spawn(command, args, spawnOpts(command, cwd, spawnEnv(javaHome)))
+    child.stdin.end()
     let output = ''
-    child.stdout.on('data', (d) => {
-      output += d.toString()
+    child.stdout.on('data', (d: Buffer) => {
+      output += decodeChunk(d)
     })
-    child.stderr.on('data', (d) => {
-      output += d.toString()
+    child.stderr.on('data', (d: Buffer) => {
+      output += decodeChunk(d)
     })
     child.on('error', (err) => {
       output += `\n${err.message}`
@@ -205,7 +255,7 @@ export async function compileProject(): Promise<CompileResult> {
   const outDir = join(root, 'out')
   mkdirSync(outDir, { recursive: true })
   const listFile = join(tmpdir(), `jcat-sources-${process.pid}.txt`)
-  writeFileSync(listFile, files.join('\n'), 'utf8')
+  writeFileSync(listFile, files.map((file) => file.replace(/\\/g, '/')).join('\n'), 'utf8')
 
   const result = await runProcess(
     tool.javac,
@@ -225,10 +275,127 @@ export async function compileProject(): Promise<CompileResult> {
   }
 }
 
+let traceDir: string | null = null
+
+function wipeTraceDir(): void {
+  if (!traceDir) return
+  try {
+    rmSync(traceDir, { recursive: true, force: true })
+  } catch {
+    /* leftover temp is harmless */
+  }
+  traceDir = null
+}
+
+async function compileInstrumented(
+  root: string,
+  javac: string,
+  javaHome: string | null
+): Promise<string | null> {
+  wipeTraceDir()
+  const srcRoot = sourceRootHint(root)
+  const files = walkJava(srcRoot)
+  if (files.length === 0) return null
+
+  traceDir = mkdtempSync(join(tmpdir(), 'jcat-trace-'))
+  const srcDir = join(traceDir, 'src')
+  const outDir = join(traceDir, 'classes')
+  mkdirSync(srcDir, { recursive: true })
+  mkdirSync(outDir, { recursive: true })
+
+  const copies: string[] = []
+  let changed = false
+  for (const file of files) {
+    const rel = relative(srcRoot, file)
+    const dest = join(srcDir, rel)
+    mkdirSync(dirname(dest), { recursive: true })
+    const original = readFileSync(file, 'utf8')
+    const { source } = instrumentJava(original)
+    if (source !== original) changed = true
+    writeFileSync(dest, source, 'utf8')
+    copies.push(dest)
+  }
+  if (!changed) {
+    wipeTraceDir()
+    return null
+  }
+
+  const snapFile = join(srcDir, 'jcat', 'JcatSnap.java')
+  mkdirSync(dirname(snapFile), { recursive: true })
+  writeFileSync(snapFile, JCAT_SNAP_JAVA, 'utf8')
+  copies.push(snapFile)
+
+  const listFile = join(traceDir, 'sources.txt')
+  writeFileSync(listFile, copies.map((file) => file.replace(/\\/g, '/')).join('\n'), 'utf8')
+  const result = await runProcess(
+    javac,
+    ['-encoding', 'UTF-8', '-d', outDir, `@${listFile}`],
+    srcDir,
+    javaHome
+  )
+  if (result.code !== 0) {
+    wipeTraceDir()
+    return null
+  }
+  return outDir
+}
+
+function attachRunIO(
+  child: ChildProcessWithoutNullStreams,
+  onData: (stream: 'stdout' | 'stderr', text: string) => void,
+  onExit: (code: number | null) => void,
+  onTrace?: (event: TraceEvent) => void
+): void {
+  let errBuf = ''
+  const flushErr = (final: boolean): void => {
+    const parts = errBuf.split(/\r?\n/)
+    if (!final) errBuf = parts.pop() ?? ''
+    else {
+      errBuf = ''
+      if (parts.length && parts[parts.length - 1] === '') parts.pop()
+    }
+    let user = ''
+    for (const line of parts) {
+      const ev = parseTraceLine(line)
+      if (ev) onTrace?.(ev)
+      else user += `${line}\n`
+    }
+    if (user) onData('stderr', user)
+  }
+
+  child.stdout.on('data', (d: Buffer) => onData('stdout', decodeChunk(d)))
+  child.stderr.on('data', (d: Buffer) => {
+    errBuf += decodeChunk(d)
+    flushErr(false)
+  })
+  child.on('error', (err) => {
+    onData('stderr', err.message + '\n')
+    onExit(1)
+    running = null
+  })
+  child.on('close', (code) => {
+    flushErr(true)
+    running = null
+    onExit(code)
+  })
+}
+
+export function writeStdin(text: string): boolean {
+  if (!running?.stdin || running.stdin.destroyed) return false
+  let line = text.endsWith('\n') ? text : `${text}\n`
+  if (process.platform === 'win32') line = line.replace(/(?<!\r)\n/g, '\r\n')
+  return running.stdin.write(line, 'utf8')
+}
+
 export function stopRun(): void {
   if (!running) return
   const proc = running
   running = null
+  try {
+    proc.stdin.end()
+  } catch {
+    /* already closed */
+  }
   if (process.platform === 'win32' && proc.pid) {
     spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { windowsHide: true })
   } else {
@@ -239,7 +406,10 @@ export function stopRun(): void {
 export async function runMain(
   mainClass: string | undefined,
   onData: (stream: 'stdout' | 'stderr', text: string) => void,
-  onExit: (code: number | null) => void
+  onExit: (code: number | null) => void,
+  onCompiled?: (result: CompileResult) => void,
+  replay?: string,
+  onTrace?: (event: TraceEvent) => void
 ): Promise<void> {
   stopRun()
   const root = getRoot()
@@ -250,8 +420,9 @@ export async function runMain(
   }
 
   const compiled = await compileProject()
+  onCompiled?.(compiled)
   if (!compiled.ok) {
-    onData('stderr', compiled.output + '\n')
+    onData('stderr', compiled.output + (compiled.output.endsWith('\n') ? '' : '\n'))
     onExit(1)
     return
   }
@@ -266,36 +437,27 @@ export async function runMain(
 
   const env = spawnEnv(tool.javaHome)
   if (compiled.projectKind === 'maven' && tool.maven && mavenMainClass(root)) {
-    running = spawn(tool.maven, ['-q', 'exec:java', `-Dexec.mainClass=${cls}`], {
-      cwd: root,
-      windowsHide: true,
-      env
-    })
+    running = spawn(
+      tool.maven,
+      ['-q', 'exec:java', `-Dexec.mainClass=${cls}`],
+      spawnOpts(tool.maven, root, env)
+    )
   } else {
     if (!tool.java) {
       onData('stderr', '没有找到 java 命令。\n')
       onExit(1)
       return
     }
-    const cp = compiled.classpath || join(root, 'out')
-    running = spawn(tool.java, ['-cp', cp, cls], {
-      cwd: root,
-      windowsHide: true,
-      env
-    })
+    let cp = compiled.classpath || join(root, 'out')
+    if (compiled.projectKind === 'folder' && tool.javac) {
+      const traced = await compileInstrumented(root, tool.javac, tool.javaHome)
+      if (traced) cp = traced
+    }
+    running = spawn(tool.java, ['-cp', cp, cls], spawnOpts(tool.java, root, env))
   }
 
-  running.stdout.on('data', (d) => onData('stdout', d.toString()))
-  running.stderr.on('data', (d) => onData('stderr', d.toString()))
-  running.on('error', (err) => {
-    onData('stderr', err.message + '\n')
-    onExit(1)
-    running = null
-  })
-  running.on('close', (code) => {
-    running = null
-    onExit(code)
-  })
+  attachRunIO(running, onData, onExit, onTrace)
+  if (replay?.trim()) writeStdin(replay)
 }
 
 export function relativeToRoot(file: string): string {

@@ -6,3 +6,8 @@ out
 *.log*
 .jcat
 release
+.env
+.env.*
+settings.json
+*.pem
+*.key
