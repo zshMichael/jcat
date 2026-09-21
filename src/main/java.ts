@@ -428,7 +428,8 @@ export async function runMain(
   onCompiled?.(compiled)
   if (!compiled.ok) {
     if (compiled.notice) onNotice?.(compiled.notice)
-    if (compiled.output) onData('stderr', compiled.output + (compiled.output.endsWith('\n') ? '' : '\n'))
+    if (compiled.output)
+      onData('stderr', compiled.output + (compiled.output.endsWith('\n') ? '' : '\n'))
     onExit(1)
     return
   }

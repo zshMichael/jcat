@@ -28,18 +28,18 @@ DeepSeek 只在你主动开启幽灵补写或 AI Debug 时才会用到。那时�
 
 到 [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.1) 下载：
 
-| 系统 | 文件 |
-| --- | --- |
-| macOS Apple Silicon | `jcat-1.1.1.dmg` |
-| Windows x64 | `jcat-1.1.1-x64-setup.exe` |
-| Windows ARM64 | `jcat-1.1.1-arm64-setup.exe` |
-| Windows 默认（x64） | `jcat-1.1.1-setup.exe` |
+| 系统                                | 文件                         |
+| ----------------------------------- | ---------------------------- |
+| macOS Apple Silicon                 | `jcat-1.1.1.dmg`             |
+| Windows x64                         | `jcat-1.1.1-x64-setup.exe`   |
+| Windows ARM64                       | `jcat-1.1.1-arm64-setup.exe` |
+| Windows 自动识别（含 x64 与 ARM64） | `jcat-1.1.1-setup.exe`       |
 
 安装包附带 `SHA256SUMS.txt`。下载后可核对自己文件的 SHA-256。当前没有 Apple 公证，也没有 Windows 代码签名。**不要**为了打开 Jcat 去关闭系统安全功能。
 
 **macOS：** 包未公证。第一次打开：在访达中右键 Jcat → 打开。把 `/Applications/Jcat.app` 换掉即可覆盖升级，设置和 Key 还在。若系统提示无法验证开发者，用右键打开，而不是关掉 Gatekeeper。
 
-**Windows：** 安装包未签名，SmartScreen 可能提示。选择「仍要运行」即可。用同一 `appId`（`com.jcat.ide`）覆盖安装，不必先卸载。x64 与 ARM64 请选对应安装包；`jcat-1.1.1-setup.exe` 是给常见 x64 电脑的默认包。
+**Windows：** 安装包未签名，SmartScreen 可能提示。选择「仍要运行」即可。用同一 `appId`（`com.jcat.ide`）覆盖安装，不必先卸载。x64 与 ARM64 专用包只含对应架构。`jcat-1.1.1-setup.exe` 是 NSIS 双架构包，安装时按系统选择负载，不是 x64 的改名复制。
 
 卸载应用**不会**删除你的工程文件夹。默认也不删除用户数据。覆盖升级会保留主题、语言、JDK / Maven 路径、最近工程和 API Key。
 
@@ -56,7 +56,7 @@ Jcat **不内置 JDK**。编译和运行 Java 需要本机已安装的 JDK。AP 
 ### 代码什么时候会离开这台电脑
 
 - Java 编译和运行始终在本机。
-- API Key 只保存在本机用户目录。v1.1.1 起优先写入系统安全存储（macOS Keychain 加密、Windows 用户级加密），设置文件里不再保存明文 Key。
+- API Key 只保存在本机用户目录。v1.1.1 起把 Key 写入 `secrets.bin`，并用 Electron `safeStorage` 的**用户级加密**保护这份本地密文（macOS 上该加密由系统钥匙串能力支持，但并不是把原始 Key 当作一条钥匙串密码保存）。设置文件里不再保存明文 Key。若加密不可用或迁移失败，会明确提示，并保留旧明文直到迁移成功。
 - **只有**你主动开启幽灵补写或 AI Debug 时，相关代码才会直接发给 DeepSeek API。
 - AI Debug 可能发送源码、选区、编译错误和运行输出。
 - Jcat 没有自己的中转服务器。
@@ -66,12 +66,12 @@ Jcat **不内置 JDK**。编译和运行 Java 需要本机已安装的 JDK。AP 
 
 以本机实际运行结果为准（文件夹名是小写 `jcat`）：
 
-| 系统 | 路径 |
-| --- | --- |
-| macOS | `~/Library/Application Support/jcat` |
-| Windows | `%APPDATA%\jcat` |
+| 系统    | 路径                                 |
+| ------- | ------------------------------------ |
+| macOS   | `~/Library/Application Support/jcat` |
+| Windows | `%APPDATA%\jcat`                     |
 
-其中 `settings.json` 是主题、语言、路径等设置；API Key 在系统安全存储（以及必要时的 `secrets.bin`）。考试未结束时会另有 `exam-session.json`，**不含** API Key。覆盖升级会继续读这些文件。卸载默认不删除它们，也不会删除你自己的工程。
+其中 `settings.json` 是主题、语言、路径等设置；API Key 的密文在 `secrets.bin`（由 `safeStorage` 加密）。考试未结束时会另有 `exam-session.json`，**不含** API Key。覆盖升级会继续读这些文件。卸载默认不删除它们，也不会删除你自己的工程。
 
 同一台电脑上 `npm run dev` 和已经装好的 Jcat 共用这份用户数据。
 
@@ -118,18 +118,18 @@ DeepSeek is used only when you turn on ghost write or AI Debug. Then the relevan
 
 Grab a build from [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.1):
 
-| OS | File |
-| --- | --- |
-| macOS Apple Silicon | `jcat-1.1.1.dmg` |
-| Windows x64 | `jcat-1.1.1-x64-setup.exe` |
-| Windows ARM64 | `jcat-1.1.1-arm64-setup.exe` |
-| Windows default (x64) | `jcat-1.1.1-setup.exe` |
+| OS                         | File                         |
+| -------------------------- | ---------------------------- |
+| macOS Apple Silicon        | `jcat-1.1.1.dmg`             |
+| Windows x64                | `jcat-1.1.1-x64-setup.exe`   |
+| Windows ARM64              | `jcat-1.1.1-arm64-setup.exe` |
+| Windows auto (x64 + ARM64) | `jcat-1.1.1-setup.exe`       |
 
 Releases include `SHA256SUMS.txt`. Check the SHA-256 of the file you downloaded. Builds are **not** Apple-notarized and **not** Windows-signed. Do **not** turn off OS security features just to open Jcat.
 
 **macOS:** not notarized. First launch: right-click Jcat → Open. Replacing `/Applications/Jcat.app` upgrades in place; settings and the key stay. If Gatekeeper warns, use Open from the context menu instead of disabling Gatekeeper.
 
-**Windows:** unsigned, so SmartScreen may warn. Choose Run anyway. Setup overwrites the previous install (`appId` `com.jcat.ide` is stable). Use the matching x64 or ARM64 installer; `jcat-1.1.1-setup.exe` is the default package for typical x64 PCs.
+**Windows:** unsigned, so SmartScreen may warn. Choose Run anyway. Setup overwrites the previous install (`appId` `com.jcat.ide` is stable). The x64 and ARM64 packages contain only that architecture. `jcat-1.1.1-setup.exe` is a multi-arch NSIS installer that picks the payload at install time; it is not a renamed x64 copy.
 
 Uninstall does **not** delete your project folders. App data is kept by default. An in-place upgrade keeps theme, language, JDK / Maven paths, recent projects, and the API key.
 
@@ -146,7 +146,7 @@ Jcat does **not** ship a JDK. Compiling and running Java needs a JDK on the mach
 ### When code leaves this computer
 
 - Java compile and run are always local.
-- The API key is stored only in this user account. v1.1.1 prefers OS secret storage (Keychain-backed encryption on macOS, user-level encryption on Windows). `settings.json` no longer keeps a plaintext key.
+- The API key is stored only in this user account. v1.1.1 writes it to `secrets.bin` and protects that local ciphertext with Electron `safeStorage` user-level encryption (on macOS this uses Keychain-backed encryption; the raw key is not stored as a Keychain password item). `settings.json` no longer keeps a plaintext key. If encryption is unavailable or migration fails, Jcat says so and keeps the old plaintext until migration succeeds.
 - Code is sent to DeepSeek **only** if you turn on ghost write or AI Debug.
 - AI Debug may send source, a selection, compiler errors, and run output.
 - Jcat has no proxy or relay of its own.
@@ -156,12 +156,12 @@ Jcat does **not** ship a JDK. Compiling and running Java needs a JDK on the mach
 
 Confirmed from a running app (folder name is lowercase `jcat`):
 
-| OS | Path |
-| --- | --- |
-| macOS | `~/Library/Application Support/jcat` |
-| Windows | `%APPDATA%\jcat` |
+| OS      | Path                                 |
+| ------- | ------------------------------------ |
+| macOS   | `~/Library/Application Support/jcat` |
+| Windows | `%APPDATA%\jcat`                     |
 
-`settings.json` holds theme, language, and paths. The API key lives in OS secret storage (and `secrets.bin` when needed). An unfinished exam uses `exam-session.json`, which does **not** contain the key. Upgrades keep reading these files. Uninstall does not remove them by default, and never deletes your projects.
+`settings.json` holds theme, language, and paths. The API key ciphertext lives in `secrets.bin` (encrypted by `safeStorage`). An unfinished exam uses `exam-session.json`, which does **not** contain the key. Upgrades keep reading these files. Uninstall does not remove them by default, and never deletes your projects.
 
 `npm run dev` and the installed app on the same computer share this folder.
 
@@ -208,18 +208,18 @@ DeepSeek는 보강 입력 또는 AI Debug를 **직접 켠 뒤에만** 쓰입니�
 
 [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.1)에서 받습니다.
 
-| OS | 파일 |
-| --- | --- |
-| macOS Apple Silicon | `jcat-1.1.1.dmg` |
-| Windows x64 | `jcat-1.1.1-x64-setup.exe` |
-| Windows ARM64 | `jcat-1.1.1-arm64-setup.exe` |
-| Windows 기본(x64) | `jcat-1.1.1-setup.exe` |
+| OS                             | 파일                         |
+| ------------------------------ | ---------------------------- |
+| macOS Apple Silicon            | `jcat-1.1.1.dmg`             |
+| Windows x64                    | `jcat-1.1.1-x64-setup.exe`   |
+| Windows ARM64                  | `jcat-1.1.1-arm64-setup.exe` |
+| Windows 자동 인식(x64 + ARM64) | `jcat-1.1.1-setup.exe`       |
 
 릴리스에 `SHA256SUMS.txt`가 있습니다. 받은 파일의 SHA-256을 확인하세요. 현재 macOS 공증과 Windows 코드 서명은 없습니다. Jcat을 열려고 **시스템 보안 기능을 끄지 마세요.**
 
 **macOS:** 공증되어 있지 않습니다. 처음 실행: Finder에서 Jcat을 우클릭 → 열기. `/Applications/Jcat.app`만 바꾸면 덮어쓰기 업그레이드되고 설정과 Key는 남습니다. Gatekeeper 경고가 나면 Gatekeeper를 끄지 말고 우클릭으로 여세요.
 
-**Windows:** 서명이 없어 SmartScreen이 경고할 수 있습니다. 그래도 실행을 고르세요. 같은 `appId`(`com.jcat.ide`)로 덮어씁니다. x64와 ARM64는 해당 설치 파일을 쓰세요. `jcat-1.1.1-setup.exe`는 일반적인 x64 PC용 기본 패키지입니다.
+**Windows:** 서명이 없어 SmartScreen이 경고할 수 있습니다. 그래도 실행을 고르세요. 같은 `appId`(`com.jcat.ide`)로 덮어씁니다. x64와 ARM64 전용 패키지는 해당 아키텍처만 담습니다. `jcat-1.1.1-setup.exe`는 설치 시 아키텍처를 고르는 NSIS 듀얼 패키지이며, x64 파일을 이름만 바꾼 것이 아닙니다.
 
 앱을 제거해도 **사용자 프로젝트 폴더는 지우지 않습니다.** 사용자 데이터도 기본으로 남습니다. 덮어쓰기 업그레이드는 테마, 언어, JDK/Maven 경로, 최근 프로젝트, API Key를 유지합니다.
 
@@ -236,7 +236,7 @@ Jcat은 JDK를 **내장하지 않습니다.** Java를 컴파일·실행하려면
 ### 코드가 이 컴퓨터를 떠나는 때
 
 - Java 컴파일과 실행은 항상 로컬입니다.
-- API Key는 이 사용자 계정에만 저장됩니다. v1.1.1부터는 OS 보안 저장소(macOS Keychain 암호화, Windows 사용자 수준 암호화)를 우선합니다. `settings.json`에는 더 이상 평문 Key를 두지 않습니다.
+- API Key는 이 사용자 계정에만 저장됩니다. v1.1.1은 `secrets.bin`에 쓰고 Electron `safeStorage`의 **사용자 수준 암호화**로 이 로컬 암호문을 보호합니다(macOS에서는 Keychain이 이 암호화를 뒷받침하지만, 원문 Key를 열쇠고리 암호 항목으로 넣는 것은 아닙니다). `settings.json`에는 더 이상 평문 Key를 두지 않습니다. 암호화를 쓸 수 없거나 이전에 실패하면 분명히 알리고, 성공할 때까지 예전 평문을 남깁니다.
 - 보강 입력 또는 AI Debug를 **직접 켠 경우에만** 관련 코드가 DeepSeek API로 전송됩니다.
 - AI Debug는 소스, 선택 구간, 컴파일 오류, 실행 출력을 보낼 수 있습니다.
 - Jcat 자체 프록시/중계 서버는 없습니다.
@@ -246,12 +246,12 @@ Jcat은 JDK를 **내장하지 않습니다.** Java를 컴파일·실행하려면
 
 실제 실행으로 확인한 경로입니다(폴더 이름은 소문자 `jcat`):
 
-| OS | 경로 |
-| --- | --- |
-| macOS | `~/Library/Application Support/jcat` |
-| Windows | `%APPDATA%\jcat` |
+| OS      | 경로                                 |
+| ------- | ------------------------------------ |
+| macOS   | `~/Library/Application Support/jcat` |
+| Windows | `%APPDATA%\jcat`                     |
 
-`settings.json`에는 테마, 언어, 경로가 들어 있습니다. API Key는 OS 보안 저장소(필요 시 `secrets.bin`)에 있습니다. 끝나지 않은 시험은 `exam-session.json`을 쓰며 **Key를 포함하지 않습니다.** 업그레이드 후에도 이 파일을 읽습니다. 제거는 기본적으로 이 데이터를 지우지 않으며, 사용자 프로젝트도 삭제하지 않습니다.
+`settings.json`에는 테마, 언어, 경로가 들어 있습니다. API Key 암호문은 `secrets.bin`(`safeStorage`로 암호화)에 있습니다. 끝나지 않은 시험은 `exam-session.json`을 쓰며 **Key를 포함하지 않습니다.** 업그레이드 후에도 이 파일을 읽습니다. 제거는 기본적으로 이 데이터를 지우지 않으며, 사용자 프로젝트도 삭제하지 않습니다.
 
 같은 컴퓨터의 `npm run dev`와 설치된 Jcat이 이 폴더를 공유합니다.
 

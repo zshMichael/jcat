@@ -137,7 +137,12 @@ export async function complete(req: CompleteRequest): Promise<CompleteResponse> 
 }
 
 function debugUser(req: DebugRequest, locale: Locale | undefined): string {
-  const clipped = locale === 'en' ? 'Content truncated for length.' : locale === 'ko' ? '길이 제한으로 잘렸습니다.' : '内容过长，已截断。'
+  const clipped =
+    locale === 'en'
+      ? 'Content truncated for length.'
+      : locale === 'ko'
+        ? '길이 제한으로 잘렸습니다.'
+        : '内容过长，已截断。'
   const src = clipText(req.source ?? '', AI_LIMITS.source)
   const selected = req.selectedSource ? clipText(req.selectedSource, AI_LIMITS.selected) : null
   const output = clipText(req.errorOutput ?? '', AI_LIMITS.output)
@@ -156,9 +161,15 @@ function debugUser(req: DebugRequest, locale: Locale | undefined): string {
         )
       : '',
     sendFull && src.text
-      ? clipNote(clipped, `full source (context only):\n\`\`\`java\n${src.text}\n\`\`\``, src.clipped)
+      ? clipNote(
+          clipped,
+          `full source (context only):\n\`\`\`java\n${src.text}\n\`\`\``,
+          src.clipped
+        )
       : '',
-    output.text ? clipNote(clipped, `compiler/run output:\n\`\`\`\n${output.text}\n\`\`\``, output.clipped) : '',
+    output.text
+      ? clipNote(clipped, `compiler/run output:\n\`\`\`\n${output.text}\n\`\`\``, output.clipped)
+      : '',
     note.text ? clipNote(clipped, `student note: ${note.text}`, note.clipped) : ''
   ]
   return parts.filter(Boolean).join('\n\n')
@@ -193,7 +204,10 @@ export async function debugStream(
           role: 'system',
           content: `You are an AP CSA FRQ reader inside Jcat, not a coder who finishes the lab. Reply in ${lang}. Use this shape, no greeting:\n${debugShape(req.locale)}\nANY Java MUST be inside a \`\`\`java fence, never as plain prose. Never paste a whole class if the file already has one. Do not write the rest of the FRQ.`
         },
-        { role: 'user', content: debugUser(req, req.locale) || 'Find the issue and give a minimal fix.' }
+        {
+          role: 'user',
+          content: debugUser(req, req.locale) || 'Find the issue and give a minimal fix.'
+        }
       ]
     }),
     signal: withTimeout(ac.signal, AI_LIMITS.requestMs)

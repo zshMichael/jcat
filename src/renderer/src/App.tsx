@@ -12,7 +12,15 @@ import {
   type JSX,
   type PointerEvent as ReactPointerEvent
 } from 'react'
-import type { CompileResult, Diagnostic, FileNode, Locale, PublicSettings, ThemeId, Toolchain } from '@shared/types'
+import type {
+  CompileResult,
+  Diagnostic,
+  FileNode,
+  Locale,
+  PublicSettings,
+  ThemeId,
+  Toolchain
+} from '@shared/types'
 import { THEME_CARDS } from '@shared/themes'
 import { addedTokens } from '@shared/examReport'
 import {
@@ -48,7 +56,12 @@ import { splitOutput } from './run/outputLinks'
 import { TraceView } from './run/TraceView'
 import { formatJava } from './editor/formatJava'
 import { parseJavaOutline, publicClassInfo, isJavaClassName } from './editor/javaOutline'
-import { paintApHints, registerApLanguage, setApHintsEnabled, setApLocale } from './editor/apLanguage'
+import {
+  paintApHints,
+  registerApLanguage,
+  setApHintsEnabled,
+  setApLocale
+} from './editor/apLanguage'
 
 self.MonacoEnvironment = {
   getWorker() {
@@ -142,17 +155,15 @@ function dropPaths(map: Record<string, string>, target: string): Record<string, 
 function remapTabPaths(list: string[], from: string, to: string): string[] {
   return list.map((path) => {
     if (path === from) return to
-    if (path.startsWith(`${from}/`) || path.startsWith(`${from}\\`)) return to + path.slice(from.length)
+    if (path.startsWith(`${from}/`) || path.startsWith(`${from}\\`))
+      return to + path.slice(from.length)
     return path
   })
 }
 
 function dropTabPaths(list: string[], target: string): string[] {
   return list.filter(
-    (path) =>
-      path !== target &&
-      !path.startsWith(`${target}/`) &&
-      !path.startsWith(`${target}\\`)
+    (path) => path !== target && !path.startsWith(`${target}/`) && !path.startsWith(`${target}\\`)
   )
 }
 
@@ -223,7 +234,8 @@ function runExcerpt(output: string): string {
   const lines = output.split('\n').filter((line) => {
     const t = line.trim()
     if (!t) return false
-    if (t.startsWith('进程结束') || t.startsWith('Process ended') || t.includes('프로세스 종료')) return false
+    if (t.startsWith('进程结束') || t.startsWith('Process ended') || t.includes('프로세스 종료'))
+      return false
     if (t.includes('Jcat 已就绪') || t.includes('Jcat is ready')) return false
     return true
   })
@@ -345,9 +357,11 @@ export default function App(): JSX.Element {
   const [moreOpen, setMoreOpen] = useState(false)
   const [stdinLine, setStdinLine] = useState('')
   const [lastStdin, setLastStdin] = useState('')
-  const [pendingJump, setPendingJump] = useState<{ path: string; line: number; column: number } | null>(
-    null
-  )
+  const [pendingJump, setPendingJump] = useState<{
+    path: string
+    line: number
+    column: number
+  } | null>(null)
   const [inputLift, setInputLift] = useState(0)
   const [thumbNorm, setThumbNorm] = useState<{ editor: ThumbNorm; run: ThumbNorm }>({
     editor: { x: 1, y: 1 },
@@ -406,11 +420,11 @@ export default function App(): JSX.Element {
   const applyExam = useCallback(
     async (event: ExamEvent): Promise<ExamSession> => {
       const tick = reduce(examRef.current, event)
-      examRef.current = tick.session
-      setExam(tick.session)
       if (tick.justZeroed) setStatusMsg(tr('examSegDone'))
-      await window.jcat.exam.saveSession(tick.session)
-      return tick.session
+      const saved = await window.jcat.exam.saveSession(tick.session)
+      examRef.current = saved
+      setExam(saved)
+      return saved
     },
     [tr]
   )
@@ -481,7 +495,10 @@ export default function App(): JSX.Element {
       )
     })
     const offNotice = window.jcat.java.onNotice((code) => {
-      setOutput((prev) => `${prev}${prev.endsWith('\n') || !prev ? '' : '\n'}${formatNotice( (k) => t(localeRef.current, k), code)}\n`)
+      setOutput(
+        (prev) =>
+          `${prev}${prev.endsWith('\n') || !prev ? '' : '\n'}${formatNotice((k) => t(localeRef.current, k), code)}\n`
+      )
     })
     const offChunk = window.jcat.ai.onDebugChunk((chunk) => {
       if (chunk.kind === 'reasoning') setDebugReasoning((prev) => prev + chunk.text)
@@ -504,9 +521,7 @@ export default function App(): JSX.Element {
       setLastCompileOk(result.ok)
       setMains(result.mainClasses)
       setMainClass((current) =>
-        current && result.mainClasses.includes(current)
-          ? current
-          : result.mainClasses[0] || current
+        current && result.mainClasses.includes(current) ? current : result.mainClasses[0] || current
       )
     })
     const offMax = window.jcat.window.onMaximized(setWinMaximized)
@@ -571,13 +586,14 @@ export default function App(): JSX.Element {
       setOutput(t(s.locale, 'ready'))
       if (s.secretError === 'SECRET_UNAVAILABLE') setStatusMsg(t(s.locale, 'secretUnavailable'))
       else if (s.secretError === 'SECRET_CORRUPT') setStatusMsg(t(s.locale, 'secretCorrupt'))
-      else if (s.secretStorage === 'legacy' && s.hasApiKey) setStatusMsg(t(s.locale, 'secretLegacy'))
+      else if (s.secretStorage === 'legacy' && s.hasApiKey)
+        setStatusMsg(t(s.locale, 'secretLegacy'))
       const session = await window.jcat.exam.getSession()
       if (session.active) {
         const tick = reduce(session, { type: 'tick', now: Date.now() })
-        examRef.current = tick.session
-        setExam(tick.session)
-        await window.jcat.exam.saveSession(tick.session)
+        const saved = await window.jcat.exam.saveSession(tick.session)
+        examRef.current = saved
+        setExam(saved)
         if (tick.justZeroed) setStatusMsg(t(s.locale, 'examSegDone'))
         setExamAsk(true)
       }
@@ -893,28 +909,31 @@ export default function App(): JSX.Element {
     setFindIndex(0)
   }, [])
 
-  const paintFind = useCallback((query: string, index: number): void => {
-    const editor = editorRef.current
-    const model = editor?.getModel()
-    if (!editor || !model || !query) {
-      clearFind()
-      return
-    }
-    const matches = model.findMatches(query, true, false, false, null, true)
-    findRangesRef.current = matches.map((item) => item.range)
-    const safe = matches.length ? ((index % matches.length) + matches.length) % matches.length : 0
-    findDecosRef.current = editor.deltaDecorations(
-      findDecosRef.current,
-      matches.map((item, i) => ({
-        range: item.range,
-        options: { className: i === safe ? 'jcat-find-on' : 'jcat-find' }
-      }))
-    )
-    const hit = findRangesRef.current[safe]
-    if (hit) editor.revealRangeInCenter(hit)
-    setFindTotal(matches.length)
-    setFindIndex(safe)
-  }, [clearFind])
+  const paintFind = useCallback(
+    (query: string, index: number): void => {
+      const editor = editorRef.current
+      const model = editor?.getModel()
+      if (!editor || !model || !query) {
+        clearFind()
+        return
+      }
+      const matches = model.findMatches(query, true, false, false, null, true)
+      findRangesRef.current = matches.map((item) => item.range)
+      const safe = matches.length ? ((index % matches.length) + matches.length) % matches.length : 0
+      findDecosRef.current = editor.deltaDecorations(
+        findDecosRef.current,
+        matches.map((item, i) => ({
+          range: item.range,
+          options: { className: i === safe ? 'jcat-find-on' : 'jcat-find' }
+        }))
+      )
+      const hit = findRangesRef.current[safe]
+      if (hit) editor.revealRangeInCenter(hit)
+      setFindTotal(matches.length)
+      setFindIndex(safe)
+    },
+    [clearFind]
+  )
 
   const formatCurrent = useCallback((): void => {
     if (!openFile || !openFile.toLowerCase().endsWith('.java')) return
@@ -1018,7 +1037,10 @@ export default function App(): JSX.Element {
     setMainClass((current) =>
       pickMain(openFile, openFile ? (buffers[openFile] ?? '') : '', result.mainClasses, current)
     )
-    setOutput(formatCompile(tr, result) + (result.output && result.notice ? `\n${result.output}` : result.notice ? '\n' : '\n'))
+    setOutput(
+      formatCompile(tr, result) +
+        (result.output && result.notice ? `\n${result.output}` : result.notice ? '\n' : '\n')
+    )
     setLastCompileOk(result.ok)
     if (result.ok) {
       setStatusMsg(tr('compileOk'))
@@ -1063,7 +1085,10 @@ export default function App(): JSX.Element {
     sessionStdinRef.current += `${line}\n`
     await window.jcat.java.writeStdin(line)
     setOutput((prev) => {
-      const shown = line.split('\n').map((row) => `› ${row}`).join('\n')
+      const shown = line
+        .split('\n')
+        .map((row) => `› ${row}`)
+        .join('\n')
       return `${prev}${prev.endsWith('\n') || !prev ? '' : '\n'}${shown}\n`
     })
   }, [running, stdinLine])
@@ -1126,10 +1151,13 @@ export default function App(): JSX.Element {
     setInlineCompletionEnabled(!examMode)
     setStatusMsg(tr('ghostOn'))
     if (!examMode) {
-      window.setTimeout(() => {
-        editorRef.current?.focus()
-        editorRef.current?.trigger('jcat', 'editor.action.inlineSuggest.trigger', {})
-      }, Math.max(80, saved.completionDelayMs || 400) + 40)
+      window.setTimeout(
+        () => {
+          editorRef.current?.focus()
+          editorRef.current?.trigger('jcat', 'editor.action.inlineSuggest.trigger', {})
+        },
+        Math.max(80, saved.completionDelayMs || 400) + 40
+      )
     }
   }
 
@@ -1187,8 +1215,7 @@ export default function App(): JSX.Element {
     setStatusMsg(tr('exporting'))
     try {
       const card = THEME_CARDS.find((item) => item.id === themeId)
-      const cls =
-        publicClassInfo(currentCode)?.name || fileName.replace(/\.java$/i, '') || 'Main'
+      const cls = publicClassInfo(currentCode)?.name || fileName.replace(/\.java$/i, '') || 'Main'
       const dataUrl = await renderCodePng(monacoApi, code, {
         className: cls,
         fileName: fileName || 'code.java',
@@ -1228,7 +1255,15 @@ export default function App(): JSX.Element {
           setStatusMsg(tr('examLocked'))
           return
         }
-        if (ex.seg === 'mcq' && (meta && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'b' || e.key.toLowerCase() === 'f') || e.key === 'F5' || (e.altKey && e.shiftKey && e.key.toLowerCase() === 'f'))) {
+        if (
+          ex.seg === 'mcq' &&
+          ((meta &&
+            (e.key.toLowerCase() === 's' ||
+              e.key.toLowerCase() === 'b' ||
+              e.key.toLowerCase() === 'f')) ||
+            e.key === 'F5' ||
+            (e.altKey && e.shiftKey && e.key.toLowerCase() === 'f'))
+        ) {
           e.preventDefault()
           setStatusMsg(tr('examLocked'))
           return
@@ -1285,7 +1320,20 @@ export default function App(): JSX.Element {
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [clearFind, closeTab, compile, findOpen, formatCurrent, newFile, openFile, openFolder, run, saveCurrent, stop, tr])
+  }, [
+    clearFind,
+    closeTab,
+    compile,
+    findOpen,
+    formatCurrent,
+    newFile,
+    openFile,
+    openFolder,
+    run,
+    saveCurrent,
+    stop,
+    tr
+  ])
 
   const jdkLabel = useMemo(() => {
     if (!toolchain) return 'JDK …'
@@ -1304,7 +1352,10 @@ export default function App(): JSX.Element {
     setThumbDragging(null)
   }, [])
 
-  const onThumbPointerDown = (key: 'editor' | 'run', e: ReactPointerEvent<HTMLDivElement>): void => {
+  const onThumbPointerDown = (
+    key: 'editor' | 'run',
+    e: ReactPointerEvent<HTMLDivElement>
+  ): void => {
     if (e.button !== 0) return
     if (key === 'editor' && editorKind !== 'thumb') return
     if (key === 'run' && runKind !== 'thumb') return
@@ -1331,7 +1382,10 @@ export default function App(): JSX.Element {
     }, THUMB_LONG_MS)
   }
 
-  const onThumbPointerMove = (key: 'editor' | 'run', e: ReactPointerEvent<HTMLDivElement>): void => {
+  const onThumbPointerMove = (
+    key: 'editor' | 'run',
+    e: ReactPointerEvent<HTMLDivElement>
+  ): void => {
     const press = thumbPressRef.current
     if (press && press.key === key && !thumbDragRef.current) {
       const dist = Math.hypot(e.clientX - press.startX, e.clientY - press.startY)
@@ -1676,7 +1730,11 @@ export default function App(): JSX.Element {
         onDoubleClick={(e) => {
           if (window.jcat.platform === 'darwin') return
           const target = e.target as HTMLElement
-          if (target.closest('button, a, input, select, .anim-select, .more-menu, .lang-menu, .window-controls'))
+          if (
+            target.closest(
+              'button, a, input, select, .anim-select, .more-menu, .lang-menu, .window-controls'
+            )
+          )
             return
           void window.jcat.window.maximize()
         }}
@@ -1691,9 +1749,7 @@ export default function App(): JSX.Element {
               <button className="primary" onClick={() => void run()} disabled={!root || running}>
                 {tr('run')}
               </button>
-              {running ? (
-                <button onClick={() => void stop()}>{tr('stop')}</button>
-              ) : null}
+              {running ? <button onClick={() => void stop()}>{tr('stop')}</button> : null}
               <button onClick={() => void compile()} disabled={!root}>
                 {tr('compile')}
               </button>
@@ -1842,16 +1898,16 @@ export default function App(): JSX.Element {
                   </button>
                 )}
                 {examMode && examSeg === 'mcq' ? null : (
-                <button
-                  type="button"
-                  disabled={!openFile}
-                  onClick={() => {
-                    setMoreOpen(false)
-                    void saveCurrent()
-                  }}
-                >
-                  {tr('save')}
-                </button>
+                  <button
+                    type="button"
+                    disabled={!openFile}
+                    onClick={() => {
+                      setMoreOpen(false)
+                      void saveCurrent()
+                    }}
+                  >
+                    {tr('save')}
+                  </button>
                 )}
                 {examMode ? null : (
                   <button
@@ -1880,7 +1936,9 @@ export default function App(): JSX.Element {
                       })()
                     }}
                   >
-                    {settings?.homeworkHideLines ? tr('homeworkShowLines') : tr('homeworkHideLines')}
+                    {settings?.homeworkHideLines
+                      ? tr('homeworkShowLines')
+                      : tr('homeworkHideLines')}
                   </button>
                 )}
                 {examMode ? null : (
@@ -2242,16 +2300,14 @@ export default function App(): JSX.Element {
             <button type="submit" disabled={!running}>
               Enter
             </button>
-            <button
-              type="button"
-              disabled={!lastStdin.trim()}
-              onClick={() => replayInput()}
-            >
+            <button type="button" disabled={!lastStdin.trim()} onClick={() => replayInput()}>
               {tr('replayInput')}
             </button>
           </form>
         </div>
-        {examMode ? <ExamReference locale={locale} open={examRefOpen && examSeg === 'frq'} t={tr} /> : null}
+        {examMode ? (
+          <ExamReference locale={locale} open={examRefOpen && examSeg === 'frq'} t={tr} />
+        ) : null}
       </section>
 
       <SidePanel
@@ -2317,7 +2373,13 @@ export default function App(): JSX.Element {
             >
               {tr('examResumeContinue')}
             </button>
-            <button type="button" onClick={() => { setExamAsk(false); restartExam() }}>
+            <button
+              type="button"
+              onClick={() => {
+                setExamAsk(false)
+                restartExam()
+              }}
+            >
               {tr('examResumeRestart')}
             </button>
             <button
@@ -2405,11 +2467,7 @@ export default function App(): JSX.Element {
           </button>
         </div>
       </ModalShell>
-      <ModalShell
-        open={frqOpen}
-        onClose={() => setFrqOpen(false)}
-        className="name-modal frq-modal"
-      >
+      <ModalShell open={frqOpen} onClose={() => setFrqOpen(false)} className="name-modal frq-modal">
         <h3>{tr('frqPick')}</h3>
         <div className="frq-picks">
           {(

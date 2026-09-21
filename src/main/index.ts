@@ -6,13 +6,7 @@ import { basename, dirname, join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { abortComplete, abortDebug, complete, debugStream } from './deepseek'
-import {
-  compileProject,
-  runMain,
-  scanMainClasses,
-  stopRun,
-  writeStdin
-} from './java'
+import { compileProject, runMain, scanMainClasses, stopRun, writeStdin } from './java'
 import { detectToolchain } from './jdk'
 import { loadSettings, publicSettings, saveSettings } from './settings'
 import { clearSecretKey, setSecretKey } from './secretStore'
@@ -257,15 +251,12 @@ function registerIpc(): void {
     saveSettings({ lastRoot: created.root })
     return created
   })
-  ipcMain.handle(
-    'workspace:createFrq',
-    (_e, kind: 'methods' | 'class' | 'arraylist' | 'grid') => {
-      if (denyIfExam()) return null
-      const created = createFrq(kind)
-      saveSettings({ lastRoot: created.root })
-      return created
-    }
-  )
+  ipcMain.handle('workspace:createFrq', (_e, kind: 'methods' | 'class' | 'arraylist' | 'grid') => {
+    if (denyIfExam()) return null
+    const created = createFrq(kind)
+    saveSettings({ lastRoot: created.root })
+    return created
+  })
   ipcMain.handle('workspace:rename', (_e, from: string, name: string) => renameEntry(from, name))
   ipcMain.handle('workspace:delete', (_e, target: string) => {
     deleteEntry(target)
@@ -304,7 +295,9 @@ function registerIpc(): void {
     )
   })
   ipcMain.handle('java:stop', () => stopRun())
-  ipcMain.handle('java:writeStdin', (_e, text: string) => writeStdin(typeof text === 'string' ? text : ''))
+  ipcMain.handle('java:writeStdin', (_e, text: string) =>
+    writeStdin(typeof text === 'string' ? text : '')
+  )
 
   ipcMain.handle('ai:complete', (_e, req: CompleteRequest) => complete(req))
   ipcMain.handle('ai:completeAbort', () => abortComplete())
@@ -342,8 +335,8 @@ app.whenReady().then(() => {
   app.setName('Jcat')
   if (process.platform !== 'darwin') Menu.setApplicationMenu(null)
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
-  registerIpc()
   setExamLocked(loadExamSession().active)
+  registerIpc()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

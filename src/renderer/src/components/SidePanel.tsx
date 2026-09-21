@@ -157,7 +157,15 @@ export function SidePanel({
   )
 }
 
-function ApCopy({ item, locale, compact }: { item: ApItem; locale: Locale; compact?: boolean }): JSX.Element {
+function ApCopy({
+  item,
+  locale,
+  compact
+}: {
+  item: ApItem
+  locale: Locale
+  compact?: boolean
+}): JSX.Element {
   return (
     <div className={`ap-copy ${compact ? 'is-compact' : ''}`}>
       {item.stats && item.stats.length > 0 ? (

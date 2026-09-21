@@ -168,11 +168,15 @@ const zh = {
   javaMissing: '没有找到 java 命令。',
   exportSaved: '已导出 {path}',
   processEnded: '进程结束，退出码 {code}',
-  apiPrivacy: '只有你打开补写或 AI Debug 时，相关代码才会直接发给 DeepSeek。编译运行始终在本机。没有 Key 也可以用。',
-  secretUnavailable: '系统安全存储不可用，Key 未写入磁盘。',
-  secretLegacy: '仍在使用旧版明文 Key。请打开设置保存一次以迁移。',
-  secretCorrupt: '安全存储里的 Key 无法解密。旧 Key 仍保留在本地，没有删除。',
-  secretOk: 'API Key 已保存在系统安全存储。',
+  apiPrivacy:
+    '只有你打开补写或 AI Debug 时，相关代码才会直接发给 DeepSeek。编译运行始终在本机。没有 Key 也可以用。',
+  secretUnavailable:
+    '系统提供的用户级加密不可用，Key 未写入 secrets.bin。旧明文（如有）仍留在本机设置文件中。',
+  secretLegacy:
+    '仍在使用旧版明文 Key，尚未完成安全迁移。请打开设置保存一次以迁移。不会显示完整 Key。',
+  secretCorrupt: '本地密文无法解密。旧明文 Key 仍保留在设置文件中，没有删除。',
+  secretVerify: '写入密文后回读失败，旧明文 Key 未删除。请稍后重试保存。',
+  secretOk: 'API Key 已用系统提供的用户级加密保存在本机 secrets.bin，不是明文。',
   clearKey: '清除 Key',
   aiNeedKey: '还没有填写 DeepSeek API Key。打开设置即可。',
   aiUnauthorized: 'API Key 无效或已过期。',
@@ -241,7 +245,8 @@ const en: Record<keyof typeof zh, string> = {
   disableGhost: 'Disable ghost write',
   examMode: 'Exam mode',
   exitExam: 'Exit exam',
-  examReady: 'Exam mode: project and notes hidden. MC and FRQ are 90 minutes each; switch anytime. Ghost write is off.',
+  examReady:
+    'Exam mode: project and notes hidden. MC and FRQ are 90 minutes each; switch anytime. Ghost write is off.',
   examLeft: 'Left exam mode.',
   ghostOn: 'Ghost write on: continues what you are typing',
   ghostOff: 'Ghost write off',
@@ -370,11 +375,18 @@ const en: Record<keyof typeof zh, string> = {
   javaMissing: 'The java command was not found.',
   exportSaved: 'Exported {path}',
   processEnded: 'Process ended, exit code {code}',
-  apiPrivacy: 'Code is sent to DeepSeek only if you turn on ghost write or AI Debug. Compile and run stay on this computer. You can skip the API key.',
-  secretUnavailable: 'System secret storage is unavailable. The key was not written to disk.',
-  secretLegacy: 'A plaintext key from an older Jcat is still present. Save Settings once to migrate it.',
-  secretCorrupt: 'The stored key could not be decrypted. The old key was not deleted.',
-  secretOk: 'The API key is stored in the system secret store.',
+  apiPrivacy:
+    'Code is sent to DeepSeek only if you turn on ghost write or AI Debug. Compile and run stay on this computer. You can skip the API key.',
+  secretUnavailable:
+    'OS user-level encryption is unavailable. The key was not written to secrets.bin. Any old plaintext stays in the local settings file.',
+  secretLegacy:
+    'A plaintext key from an older Jcat is still present; secure migration is not finished. Save Settings once to migrate. The full key is never shown here.',
+  secretCorrupt:
+    'The local ciphertext could not be decrypted. The old plaintext key was not deleted.',
+  secretVerify:
+    'The ciphertext could not be read back after writing. The old plaintext key was not deleted. Try saving again later.',
+  secretOk:
+    'The API key is stored on this computer in secrets.bin, encrypted with OS user-level encryption (not plaintext).',
   clearKey: 'Clear key',
   aiNeedKey: 'Add a DeepSeek API key in Settings first.',
   aiUnauthorized: 'The API key is invalid or expired.',
@@ -443,7 +455,8 @@ const ko: Record<keyof typeof zh, string> = {
   disableGhost: '보강 입력 끄기',
   examMode: '시험 모드',
   exitExam: '시험 종료',
-  examReady: '시험 모드: 프로젝트와 자료를 숨겼습니다. 객관식과 서술형은 각 90분, 언제든 전환. 보강 입력은 꺼집니다.',
+  examReady:
+    '시험 모드: 프로젝트와 자료를 숨겼습니다. 객관식과 서술형은 각 90분, 언제든 전환. 보강 입력은 꺼집니다.',
   examLeft: '시험 모드를 종료했습니다.',
   ghostOn: '보강 입력 켜짐: 지금 쓰는 코드 이어서 채움',
   ghostOff: '보강 입력 꺼짐',
@@ -572,11 +585,17 @@ const ko: Record<keyof typeof zh, string> = {
   javaMissing: 'java 명령을 찾지 못했습니다.',
   exportSaved: '{path}(으)로 내보냄',
   processEnded: '프로세스 종료, 종료 코드 {code}',
-  apiPrivacy: '보강 입력이나 AI Debug를 켤 때만 관련 코드가 DeepSeek로 갑니다. 컴파일·실행은 이 컴퓨터에서만 합니다. Key 없이 쓸 수 있습니다.',
-  secretUnavailable: '시스템 보안 저장소를 쓸 수 없어 Key를 디스크에 쓰지 않았습니다.',
-  secretLegacy: '이전 버전의 평문 Key가 남아 있습니다. 설정에서 한 번 저장하면 이전됩니다.',
-  secretCorrupt: '보안 저장소의 Key를 풀 수 없습니다. 예전 Key는 삭제하지 않았습니다.',
-  secretOk: 'API Key는 시스템 보안 저장소에 있습니다.',
+  apiPrivacy:
+    '보강 입력이나 AI Debug를 켤 때만 관련 코드가 DeepSeek로 갑니다. 컴파일·실행은 이 컴퓨터에서만 합니다. Key 없이 쓸 수 있습니다.',
+  secretUnavailable:
+    'OS 사용자 수준 암호화를 쓸 수 없어 secrets.bin에 Key를 쓰지 않았습니다. 예전 평문이 있으면 설정 파일에 남습니다.',
+  secretLegacy:
+    '이전 버전의 평문 Key가 남아 있으며 보안 이전이 끝나지 않았습니다. 설정에서 한 번 저장하세요. 전체 Key는 표시하지 않습니다.',
+  secretCorrupt: '로컬 암호문을 풀 수 없습니다. 예전 평문 Key는 삭제하지 않았습니다.',
+  secretVerify:
+    '암호문을 쓴 뒤 다시 읽지 못했습니다. 예전 평문 Key는 그대로 있습니다. 나중에 다시 저장하세요.',
+  secretOk:
+    'API Key는 이 컴퓨터의 secrets.bin에 OS 사용자 수준 암호화로 저장되며, 평문이 아닙니다.',
   clearKey: 'Key 지우기',
   aiNeedKey: '먼저 설정에 DeepSeek API Key를 넣으세요.',
   aiUnauthorized: 'API Key가 잘못되었거나 만료되었습니다.',

@@ -4,7 +4,9 @@ export function tokensInSource(source: string): string[] {
   return uniqueTokens(detectOutOfSubset(source))
 }
 
-export function snapshotFromFiles(files: Array<{ path: string; text: string }>): Record<string, string[]> {
+export function snapshotFromFiles(
+  files: Array<{ path: string; text: string }>
+): Record<string, string[]> {
   const snap: Record<string, string[]> = {}
   for (const file of files) {
     if (!/\.java$/i.test(file.path)) continue

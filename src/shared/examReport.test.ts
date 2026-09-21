@@ -8,7 +8,10 @@ describe('examReport', () => {
       { path: '/p/A.java', text: 'import java.util.HashMap;\nclass A { HashMap m; }' }
     ])
     const after = snapshotFromFiles([
-      { path: '/p/A.java', text: 'import java.util.HashMap;\nimport java.util.HashSet;\nclass A { HashMap m; HashSet s; }' },
+      {
+        path: '/p/A.java',
+        text: 'import java.util.HashMap;\nimport java.util.HashSet;\nclass A { HashMap m; HashSet s; }'
+      },
       { path: '/p/B.java', text: 'class B { java.util.LinkedList x; }' }
     ])
     const added = addedTokens(before, after)

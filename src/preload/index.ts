@@ -82,11 +82,9 @@ const api = {
   java: {
     mains: () => ipcRenderer.invoke('java:mains') as Promise<string[]>,
     compile: () => ipcRenderer.invoke('java:compile') as Promise<CompileResult>,
-    run: (mainClass?: string, replay?: string) =>
-      ipcRenderer.invoke('java:run', mainClass, replay),
+    run: (mainClass?: string, replay?: string) => ipcRenderer.invoke('java:run', mainClass, replay),
     stop: () => ipcRenderer.invoke('java:stop'),
-    writeStdin: (text: string) =>
-      ipcRenderer.invoke('java:writeStdin', text) as Promise<boolean>,
+    writeStdin: (text: string) => ipcRenderer.invoke('java:writeStdin', text) as Promise<boolean>,
     onData: (cb: (payload: { stream: 'stdout' | 'stderr'; text: string }) => void) => {
       const listener = (
         _e: unknown,

@@ -4,6 +4,7 @@ import { i18nKeys, localeTables } from '../renderer/src/i18n'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { spawnSync } from 'node:child_process'
 
 describe('i18n', () => {
   it('zh, en, and ko expose the same keys', () => {
@@ -18,9 +19,13 @@ describe('i18n', () => {
 })
 
 describe('release version', () => {
-  it('package.json version matches the 1.1.1 release target', () => {
+  it('package.json, lockfile, changelog, notes, and README agree', () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
     const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }
     assert.equal(pkg.version, '1.1.1')
+    const check = spawnSync(process.execPath, [join(root, 'scripts/check-release-version.mjs')], {
+      encoding: 'utf8'
+    })
+    assert.equal(check.status, 0, check.stderr || check.stdout)
   })
 })

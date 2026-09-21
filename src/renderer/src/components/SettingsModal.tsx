@@ -122,10 +122,13 @@ export function SettingsModal({ open, settings, onClose, onSave, onTheme, t }: P
             autoComplete="off"
           />
           <p className="settings-privacy">{t('apiPrivacy')}</p>
-          {settings.secretStorage === 'unavailable' ? (
+          {settings.secretStorage === 'unavailable' ||
+          settings.secretError === 'SECRET_UNAVAILABLE' ? (
             <p className="settings-privacy">{t('secretUnavailable')}</p>
           ) : settings.secretError === 'SECRET_CORRUPT' ? (
             <p className="settings-privacy">{t('secretCorrupt')}</p>
+          ) : settings.secretError === 'SECRET_VERIFY' ? (
+            <p className="settings-privacy">{t('secretVerify')}</p>
           ) : settings.secretStorage === 'legacy' && settings.hasApiKey ? (
             <p className="settings-privacy">{t('secretLegacy')}</p>
           ) : settings.hasApiKey ? (

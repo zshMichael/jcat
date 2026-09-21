@@ -1,6 +1,7 @@
 import { app, safeStorage } from 'electron'
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs'
-import { dirname, join } from 'path'
+import { existsSync, readFileSync, unlinkSync } from 'fs'
+import { join } from 'path'
+import { atomicWrite } from './atomicWrite'
 import {
   clearKey,
   inspectSecrets,
@@ -14,34 +15,6 @@ import {
 
 function userDataFile(name: string): string {
   return join(app.getPath('userData'), name)
-}
-
-function lockUnix(path: string): void {
-  if (process.platform === 'win32') return
-  try {
-    chmodSync(path, 0o600)
-  } catch {
-    /* ACL / readonly fs */
-  }
-}
-
-function atomicWrite(path: string, data: string | Buffer): void {
-  const dir = dirname(path)
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  const tmp = `${path}.${process.pid}.${Date.now()}.tmp`
-  writeFileSync(tmp, data)
-  lockUnix(tmp)
-  try {
-    renameSync(tmp, path)
-  } catch {
-    writeFileSync(path, data)
-    try {
-      unlinkSync(tmp)
-    } catch {
-      /* ignore */
-    }
-  }
-  lockUnix(path)
 }
 
 function files(): SecretFiles {

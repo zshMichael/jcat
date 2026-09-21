@@ -2071,6 +2071,8 @@ input[type='checkbox']:checked::after {
   font-size: 12px;
   line-height: 1.45;
 }
+
+.settings-foot {
   display: flex;
   flex-direction: column;
   align-items: center;

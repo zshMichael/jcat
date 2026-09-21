@@ -63,7 +63,9 @@ export function settle(session: ExamSession, now: number): ExamTick {
   if (!session.active || session.paused || session.deadlineAt == null) {
     return { session, justZeroed: null }
   }
-  const left = clampMs(session.deadlineAt - now)
+  const computed = clampMs(session.deadlineAt - now)
+  const prev = remainingOf(session, session.seg)
+  const left = Math.min(prev, computed)
   const next: ExamSession = { ...session }
   let justZeroed: ExamSeg | null = null
   if (session.seg === 'mcq') {
@@ -169,7 +171,8 @@ export function parseSession(raw: unknown): ExamSession | null {
     seg,
     mcqRemainingMs: clampMs(Number(o.mcqRemainingMs)),
     frqRemainingMs: clampMs(Number(o.frqRemainingMs)),
-    deadlineAt: typeof o.deadlineAt === 'number' && Number.isFinite(o.deadlineAt) ? o.deadlineAt : null,
+    deadlineAt:
+      typeof o.deadlineAt === 'number' && Number.isFinite(o.deadlineAt) ? o.deadlineAt : null,
     mcqZeroNotified: !!o.mcqZeroNotified,
     frqZeroNotified: !!o.frqZeroNotified,
     startedAt: typeof o.startedAt === 'number' ? o.startedAt : 0,
@@ -177,4 +180,21 @@ export function parseSession(raw: unknown): ExamSession | null {
     baseline
   }
   return session
+}
+
+export function serializeSession(session: ExamSession): ExamSession {
+  return {
+    schemaVersion: EXAM_SCHEMA,
+    active: session.active,
+    paused: session.paused,
+    seg: session.seg,
+    mcqRemainingMs: session.mcqRemainingMs,
+    frqRemainingMs: session.frqRemainingMs,
+    deadlineAt: session.deadlineAt,
+    mcqZeroNotified: session.mcqZeroNotified,
+    frqZeroNotified: session.frqZeroNotified,
+    startedAt: session.startedAt,
+    projectRoot: session.projectRoot,
+    baseline: session.baseline
+  }
 }

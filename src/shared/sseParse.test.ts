@@ -11,7 +11,10 @@ describe('sseParse', () => {
   })
 
   it('ignores keep-alive comments and blank lines', () => {
-    const { events } = consumeSse('', ': keep-alive\n\ndata: {"choices":[{"delta":{"content":"x"}}]}\n')
+    const { events } = consumeSse(
+      '',
+      ': keep-alive\n\ndata: {"choices":[{"delta":{"content":"x"}}]}\n'
+    )
     assert.equal(events.length, 1)
     assert.equal(events[0]?.content, 'x')
   })

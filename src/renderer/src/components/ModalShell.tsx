@@ -33,10 +33,7 @@ export function ModalShell({ open, onClose, children, className }: Props): JSX.E
   if (!present) return null
   return (
     <div className={`modal-backdrop is-${phase}`} onClick={onClose}>
-      <div
-        className={`modal ${className ?? ''} is-${phase}`}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className={`modal ${className ?? ''} is-${phase}`} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>

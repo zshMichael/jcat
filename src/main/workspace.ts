@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -14,6 +15,7 @@ import {
 import { basename, dirname, extname, join, relative, sep } from 'path'
 import { homedir } from 'os'
 import type { FileNode } from '../shared/types'
+import { isInsideDir } from '../shared/fsGuard'
 import { loadSettings } from './settings'
 import { dialogCopy } from './nativeDialogs'
 
@@ -111,7 +113,10 @@ export function readJavaSources(): Array<{ path: string; text: string }> {
       }
       if (!name.toLowerCase().endsWith('.java')) continue
       try {
-        out.push({ path, text: readFileSync(path, 'utf8') })
+        const realRoot = realpathSync(root)
+        const realFile = realpathSync(path)
+        if (!isInsideDir(realRoot, realFile)) continue
+        out.push({ path: realFile, text: readFileSync(realFile, 'utf8') })
       } catch {
         /* skip unreadable files; exam report must not crash */
       }
@@ -362,4 +367,3 @@ export function createFrq(kind: FrqKind): { root: string; file: string } {
   currentRoot = folder
   return { root: folder, file }
 }
-

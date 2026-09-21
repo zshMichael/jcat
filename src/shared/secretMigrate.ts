@@ -52,8 +52,9 @@ export function migratePlainKey(files: SecretFiles, backend: SecretBackend): Sec
   }
   const blob = backend.encrypt(legacy)
   files.writeBlob(blob)
+  const stored = files.readBlob()
   try {
-    if (backend.decrypt(blob).trim() !== legacy) {
+    if (!stored || backend.decrypt(stored).trim() !== legacy) {
       return { hasKey: true, storage: 'legacy', error: 'SECRET_VERIFY' }
     }
   } catch {
@@ -69,7 +70,27 @@ export function saveKey(files: SecretFiles, backend: SecretBackend, key: string)
   if (!backend.available) {
     return { hasKey: false, storage: 'unavailable', error: 'SECRET_UNAVAILABLE' }
   }
-  files.writeBlob(backend.encrypt(trimmed))
+  const blob = backend.encrypt(trimmed)
+  files.writeBlob(blob)
+  const stored = files.readBlob()
+  try {
+    if (!stored || backend.decrypt(stored).trim() !== trimmed) {
+      const leftover =
+        typeof files.readSettings().apiKey === 'string' && files.readSettings().apiKey
+      return {
+        hasKey: typeof leftover === 'string' && leftover.trim().length > 0,
+        storage: leftover ? 'legacy' : 'unavailable',
+        error: 'SECRET_VERIFY'
+      }
+    }
+  } catch {
+    const leftover = typeof files.readSettings().apiKey === 'string' && files.readSettings().apiKey
+    return {
+      hasKey: typeof leftover === 'string' && leftover.trim().length > 0,
+      storage: leftover ? 'legacy' : 'unavailable',
+      error: 'SECRET_VERIFY'
+    }
+  }
   const settings = files.readSettings()
   if ('apiKey' in settings) files.writeSettings(stripKey(settings))
   return { hasKey: true, storage: 'available' }
