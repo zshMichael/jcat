@@ -51,3 +51,18 @@ export function assertMacDmg(version: string, files: ArtifactFile[]): void {
   if (!dmg) throw new Error(`missing ${name}`)
   if (dmg.size < 1_000_000) throw new Error(`${name} is too small`)
 }
+
+/** True when a `7z l -slt` listing of an NSIS installer contains that arch's app payload. */
+export function nsisListingHasArch(listing: string, arch: 'x64' | 'arm64'): boolean {
+  if (arch === 'arm64') return /arm64\.nsis\.(7z|zip)|app-arm64\.7z/i.test(listing)
+  return /x64\.nsis\.(7z|zip)|[/\\]app-64\.7z/i.test(listing)
+}
+
+export function nsisPayloadPath(listing: string, arch: 'x64' | 'arm64'): string | null {
+  const re =
+    arch === 'arm64'
+      ? /Path = ([^\r\n]*(?:app-arm64\.7z|arm64\.nsis\.(?:7z|zip)))/i
+      : /Path = ([^\r\n]*(?:[/\\]app-64\.7z|x64\.nsis\.(?:7z|zip)))/i
+  const match = listing.match(re)
+  return match ? match[1].trim() : null
+}

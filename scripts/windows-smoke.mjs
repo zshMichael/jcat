@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { spawn, spawnSync } from 'node:child_process'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
   IMAGE_FILE_MACHINE_AMD64,
@@ -9,7 +9,11 @@ import {
   machineName,
   readPeMachine
 } from '../src/shared/peMachine.ts'
-import { expectedWindowsNames } from '../src/shared/releaseArtifacts.ts'
+import {
+  expectedWindowsNames,
+  nsisListingHasArch,
+  nsisPayloadPath
+} from '../src/shared/releaseArtifacts.ts'
 
 const version = createRequire(import.meta.url)('../package.json').version
 const distArg = process.argv.includes('--dist')
@@ -48,12 +52,11 @@ function listing(seven, archive) {
 }
 
 function hasPayload(out, arch) {
-  return new RegExp(`${arch}\\.nsis\\.(7z|zip)`, 'i').test(out)
+  return nsisListingHasArch(out, arch)
 }
 
 function payloadName(out, arch) {
-  const match = out.match(new RegExp(`Path = ([^\\r\\n]*${arch}\\.nsis\\.(?:7z|zip))`, 'i'))
-  return match ? match[1].trim() : null
+  return nsisPayloadPath(out, arch)
 }
 
 function extractPeFromNsis(seven, installer, arch) {
@@ -68,7 +71,8 @@ function extractPeFromNsis(seven, installer, arch) {
       timeout: 180000
     })
     if (x1.status !== 0) return { ok: false, reason: `extract ${inner} failed` }
-    const archive = join(work, inner)
+    const innerBase = basename(inner.replaceAll('\\', '/'))
+    const archive = findNamed(work, innerBase) || join(work, inner)
     const x2 = spawnSync(seven, ['x', `-o${join(work, 'app')}`, '-y', archive, 'Jcat.exe'], {
       encoding: 'utf8',
       timeout: 180000
