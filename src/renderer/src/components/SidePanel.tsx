@@ -1,8 +1,8 @@
-import { useEffect, useState, type JSX } from 'react'
+import { Fragment, useEffect, useState, type JSX } from 'react'
 import * as monaco from 'monaco-editor'
 import type { Locale, ThemeId } from '@shared/types'
 import { APCSA_SECTIONS, APCSA_SOURCE, type ApItem } from '@shared/apcsa'
-import { splitDebugParts } from '../debug/debugParts'
+import { splitDebugParts, splitDebugTurns } from '../debug/debugParts'
 import { defineJcatThemes, monacoThemeName } from '../editor/theme'
 import type { Msg } from '../i18n'
 
@@ -71,20 +71,17 @@ function JavaCodeBox({
   )
 }
 
-function DebugReply({
+function DebugTurnBody({
   text,
   themeId,
-  placeholder,
   copyLabel,
   copiedLabel
 }: {
   text: string
   themeId: ThemeId
-  placeholder: string
   copyLabel: string
   copiedLabel: string
 }): JSX.Element {
-  if (!text) return <>{placeholder}</>
   const parts = splitDebugParts(text)
   if (!parts.length) return <div className="debug-prose">{text}</div>
   return (
@@ -104,6 +101,41 @@ function DebugReply({
           </div>
         )
       )}
+    </>
+  )
+}
+
+function DebugReply({
+  text,
+  themeId,
+  placeholder,
+  copyLabel,
+  copiedLabel
+}: {
+  text: string
+  themeId: ThemeId
+  placeholder: string
+  copyLabel: string
+  copiedLabel: string
+}): JSX.Element {
+  if (!text) return <>{placeholder}</>
+  const turns = splitDebugTurns(text)
+  if (!turns.length) return <>{placeholder}</>
+  return (
+    <>
+      {turns.map((turn, i) => (
+        <Fragment key={`turn-${i}`}>
+          {i > 0 ? <hr className="debug-turn" /> : null}
+          {turn ? (
+            <DebugTurnBody
+              text={turn}
+              themeId={themeId}
+              copyLabel={copyLabel}
+              copiedLabel={copiedLabel}
+            />
+          ) : null}
+        </Fragment>
+      ))}
     </>
   )
 }

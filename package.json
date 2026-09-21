@@ -10,7 +10,7 @@
     "lint": "eslint --cache .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
-    "test": "tsx --test src/shared/*.test.ts src/main/*.test.ts",
+    "test": "tsx --test src/shared/*.test.ts src/main/*.test.ts src/renderer/src/debug/*.test.ts",
     "test:watch": "tsx --test --watch src/shared/*.test.ts",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",

@@ -1,8 +1,11 @@
 import { toPng } from 'html-to-image'
 import type * as Monaco from 'monaco-editor'
+import { cardWidthForCode, expandExportTabs, pngScaleToMaxWidth } from '@shared/exportLayout'
 import { catMarkSrc } from '../theme/catMark'
 
 const CHUNK = 90
+const CODE_FONT =
+  '13px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
 
 export type HomeworkMeta = {
   className: string
@@ -49,6 +52,36 @@ async function stitch(dataUrls: string[], paper: string): Promise<string> {
   return canvas.toDataURL('image/png')
 }
 
+function measureLongestLinePx(lines: string[]): number {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    return Math.max(1, ...lines.map((line) => expandExportTabs(line).length)) * 8
+  }
+  ctx.font = CODE_FONT
+  let max = 0
+  for (const line of lines) {
+    const w = ctx.measureText(expandExportTabs(line)).width
+    if (w > max) max = w
+  }
+  return max
+}
+
+async function fitPng(dataUrl: string): Promise<string> {
+  const img = await loadImage(dataUrl)
+  const scale = pngScaleToMaxWidth(img.width)
+  if (scale >= 0.999) return dataUrl
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(img.width * scale))
+  canvas.height = Math.max(1, Math.round(img.height * scale))
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return dataUrl
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+  return canvas.toDataURL('image/png')
+}
+
 function numbered(html: string, start: number, hideLines: boolean): string {
   const parts = html.split(/<br\s*\/?>/i)
   return parts
@@ -69,6 +102,7 @@ export async function renderCodePng(
   if (!host) throw new Error('导出画布不存在')
   const lines = code.split('\n')
   const urls: string[] = []
+  const cardWidth = cardWidthForCode(measureLongestLinePx(lines), meta.hideLines)
   const compile =
     meta.compileOk === null ? '' : meta.compileOk ? meta.compileLabel : meta.compileLabel
 
@@ -77,6 +111,7 @@ export async function renderCodePng(
     const colorized = await monaco.editor.colorize(slice, 'java', {})
     const card = document.createElement('div')
     card.className = 'export-card'
+    card.style.width = `${cardWidth}px`
     card.style.background = meta.paper
     card.style.color = meta.ink
     const head =
@@ -99,6 +134,7 @@ export async function renderCodePng(
     host.appendChild(card)
     urls.push(
       await toPng(card, {
+        width: cardWidth,
         pixelRatio: 2,
         backgroundColor: meta.paper,
         cacheBust: true
@@ -107,7 +143,7 @@ export async function renderCodePng(
   }
 
   host.innerHTML = ''
-  return stitch(urls, meta.paper)
+  return fitPng(await stitch(urls, meta.paper))
 }
 
 function escapeHtml(text: string): string {

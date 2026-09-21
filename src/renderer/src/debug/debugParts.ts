@@ -1,5 +1,19 @@
 export type DebugPart = { kind: 'prose'; text: string } | { kind: 'java'; code: string }
 
+export const DEBUG_TURN_SEP = '\n\n<!--jcat-debug-turn-->\n\n'
+
+export function startNextDebugTurn(prev: string): string {
+  const trimmed = prev.replace(/\s+$/, '')
+  if (!trimmed) return ''
+  if (trimmed.endsWith('<!--jcat-debug-turn-->')) return `${trimmed}\n\n`
+  return `${trimmed}${DEBUG_TURN_SEP}`
+}
+
+export function splitDebugTurns(text: string): string[] {
+  if (!text) return []
+  return text.split(DEBUG_TURN_SEP)
+}
+
 function looksLikeJavaLine(line: string): boolean {
   const t = line.trim()
   if (!t) return false
