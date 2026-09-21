@@ -14,6 +14,19 @@ export function splitDebugTurns(text: string): string[] {
   return text.split(DEBUG_TURN_SEP)
 }
 
+export function dedentCode(code: string): string {
+  const lines = code.replace(/^\n+/, '').replace(/\n+$/, '').split('\n')
+  const nonempty = lines.filter((line) => line.trim())
+  if (!nonempty.length) return lines.join('\n')
+  let prefix = nonempty[0].match(/^[ \t]*/)?.[0] ?? ''
+  for (const line of nonempty) {
+    const lead = line.match(/^[ \t]*/)?.[0] ?? ''
+    while (prefix && !lead.startsWith(prefix)) prefix = prefix.slice(0, -1)
+  }
+  if (!prefix) return lines.join('\n')
+  return lines.map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line)).join('\n')
+}
+
 function looksLikeJavaLine(line: string): boolean {
   const t = line.trim()
   if (!t) return false
@@ -42,8 +55,8 @@ function splitProse(text: string): DebugPart[] {
     const value = buf.join('\n')
     buf = []
     if (kind === 'java') {
-      const code = value.replace(/^\n+/, '').replace(/\n+$/, '')
-      if (code) out.push({ kind: 'java', code })
+      const code = dedentCode(value)
+      if (code.trim()) out.push({ kind: 'java', code })
       return
     }
     if (value.trim()) out.push({ kind: 'prose', text: value })
@@ -65,7 +78,7 @@ export function splitDebugParts(text: string): DebugPart[] {
   let m: RegExpExecArray | null
   while ((m = re.exec(text))) {
     if (m.index > last) parts.push({ kind: 'prose', text: text.slice(last, m.index) })
-    const code = m[1].replace(/\n$/, '')
+    const code = dedentCode(m[1].replace(/\n$/, ''))
     if (code.trim()) parts.push({ kind: 'java', code })
     last = m.index + m[0].length
   }
