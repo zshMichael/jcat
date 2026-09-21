@@ -196,8 +196,8 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   /* Layers (low → high). Stage is isolated: overlays inside it cannot cover chrome. */
   --z-stage: 1;
-  --z-chrome: 20;
-  --z-float: 25;
+  --z-float: 10; /* tree chip, side tab, tree resizer — below chrome so More/lang menus win */
+  --z-chrome: 20; /* titlebar and its dropdowns */
   --z-veil: 35;
   --z-modal: 45;
 }
@@ -363,6 +363,32 @@ body.linux .titlebar .brand {
 .titlebar select,
 .titlebar button {
   -webkit-app-region: no-drag;
+}
+
+.titlebar button {
+  outline: none;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+  transition:
+    background-color 0.22s var(--ease),
+    border-color 0.32s var(--ease),
+    box-shadow 0.32s var(--ease),
+    color 0.22s var(--ease);
+}
+
+.titlebar button:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+}
+
+.titlebar button:focus-visible:not(:disabled):not(.win-cap) {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.titlebar .win-cap:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .actions {
@@ -603,7 +629,7 @@ body.win .debug-body {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  z-index: 12;
+  z-index: var(--z-chrome);
   min-width: 92px;
   display: grid;
   grid-template-rows: 0fr;
@@ -721,7 +747,7 @@ input[type='checkbox']:checked::after {
   position: absolute;
   top: 0;
   right: -4px;
-  z-index: 9;
+  z-index: var(--z-float);
   width: 10px;
   height: 100%;
   cursor: col-resize;
@@ -2037,6 +2063,13 @@ input[type='checkbox']:checked::after {
 
 .ap-index-btn {
   width: 100%;
+}
+
+.settings-privacy {
+  margin: 6px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .settings-foot {

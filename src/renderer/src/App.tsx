@@ -12,9 +12,25 @@ import {
   type JSX,
   type PointerEvent as ReactPointerEvent
 } from 'react'
-import type { AppSettings, CompileResult, Diagnostic, FileNode, Locale, ThemeId, Toolchain } from '@shared/types'
+import type {
+  CompileResult,
+  Diagnostic,
+  FileNode,
+  Locale,
+  PublicSettings,
+  ThemeId,
+  Toolchain
+} from '@shared/types'
 import { THEME_CARDS } from '@shared/themes'
-import { detectOutOfSubset, uniqueTokens } from '@shared/apSubset'
+import { addedTokens } from '@shared/examReport'
+import {
+  idleSession,
+  reduce,
+  type ExamEvent,
+  type ExamSeg,
+  type ExamSession
+} from '@shared/examSession'
+import { formatAiError, formatCompile, formatNotice } from './notices'
 import { traceSteps, type TraceEvent } from '@shared/instrumentJava'
 import { FileTree } from './components/FileTree'
 import { AnimSelect } from './components/AnimSelect'
@@ -40,7 +56,12 @@ import { splitOutput } from './run/outputLinks'
 import { TraceView } from './run/TraceView'
 import { formatJava } from './editor/formatJava'
 import { parseJavaOutline, publicClassInfo, isJavaClassName } from './editor/javaOutline'
-import { paintApHints, registerApLanguage, setApHintsEnabled, setApLocale } from './editor/apLanguage'
+import {
+  paintApHints,
+  registerApLanguage,
+  setApHintsEnabled,
+  setApLocale
+} from './editor/apLanguage'
 
 self.MonacoEnvironment = {
   getWorker() {
@@ -59,8 +80,6 @@ const THUMB = { w: 248, h: 164, pad: 18, hover: 1.055 }
 const THUMB_LONG_MS = 320
 const THUMB_MOVE_CANCEL = 8
 const INPUT_MIN_H = 32
-const EXAM_SEG_MS = 90 * 60 * 1000
-type ExamSeg = 'mcq' | 'frq'
 type FrqKind = 'methods' | 'class' | 'arraylist' | 'grid'
 const TREE_DEFAULT = 236
 const TREE_MIN = 168
@@ -136,32 +155,21 @@ function dropPaths(map: Record<string, string>, target: string): Record<string, 
 function remapTabPaths(list: string[], from: string, to: string): string[] {
   return list.map((path) => {
     if (path === from) return to
-    if (path.startsWith(`${from}/`) || path.startsWith(`${from}\\`)) return to + path.slice(from.length)
+    if (path.startsWith(`${from}/`) || path.startsWith(`${from}\\`))
+      return to + path.slice(from.length)
     return path
   })
 }
 
 function dropTabPaths(list: string[], target: string): string[] {
   return list.filter(
-    (path) =>
-      path !== target &&
-      !path.startsWith(`${target}/`) &&
-      !path.startsWith(`${target}\\`)
+    (path) => path !== target && !path.startsWith(`${target}/`) && !path.startsWith(`${target}\\`)
   )
 }
 
 function javaStub(fileName: string): string {
   const cls = fileName.replace(/\.java$/i, '').replace(/[^\w]/g, '_') || 'Main'
   return `public class ${cls} {\n    public static void main(String[] args) {\n        \n    }\n}\n`
-}
-
-function collectExamOut(buffers: Record<string, string>): string[] {
-  const tokens = new Set<string>()
-  for (const [path, source] of Object.entries(buffers)) {
-    if (!/\.java$/i.test(path)) continue
-    for (const token of uniqueTokens(detectOutOfSubset(source))) tokens.add(token)
-  }
-  return [...tokens]
 }
 
 function classFromJava(path: string, source: string): string | null {
@@ -226,7 +234,8 @@ function runExcerpt(output: string): string {
   const lines = output.split('\n').filter((line) => {
     const t = line.trim()
     if (!t) return false
-    if (t.startsWith('进程结束') || t.startsWith('Process ended')) return false
+    if (t.startsWith('进程结束') || t.startsWith('Process ended') || t.includes('프로세스 종료'))
+      return false
     if (t.includes('Jcat 已就绪') || t.includes('Jcat is ready')) return false
     return true
   })
@@ -303,9 +312,9 @@ export default function App(): JSX.Element {
   const [buffers, setBuffers] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState<Record<string, string>>({})
   const [cursor, setCursor] = useState({ line: 1, column: 1 })
-  const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [settings, setSettings] = useState<PublicSettings | null>(null)
   const [toolchain, setToolchain] = useState<Toolchain | null>(null)
-  const [output, setOutput] = useState('Jcat 已就绪。打开一个 Java 文件夹即可编译运行。')
+  const [output, setOutput] = useState('')
   const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([])
   const [traceStep, setTraceStep] = useState(0)
   const [running, setRunning] = useState(false)
@@ -336,12 +345,9 @@ export default function App(): JSX.Element {
   const [stageSize, setStageSize] = useState({ w: 0, h: 0 })
   const [thumbHover, setThumbHover] = useState<'editor' | 'run' | null>(null)
   const [nameAsk, setNameAsk] = useState<NameAsk>(null)
-  const [examMode, setExamMode] = useState(false)
+  const [exam, setExam] = useState<ExamSession>(idleSession)
+  const [examAsk, setExamAsk] = useState(false)
   const [examSwitching, setExamSwitching] = useState(false)
-  const [examSeg, setExamSeg] = useState<ExamSeg>('mcq')
-  const [examMcqLeft, setExamMcqLeft] = useState(EXAM_SEG_MS)
-  const [examFrqLeft, setExamFrqLeft] = useState(EXAM_SEG_MS)
-  const [examPaused, setExamPaused] = useState(false)
   const [examReport, setExamReport] = useState<string[] | null>(null)
   const [frqOpen, setFrqOpen] = useState(false)
   const [examRefOpen, setExamRefOpen] = useState(false)
@@ -351,9 +357,11 @@ export default function App(): JSX.Element {
   const [moreOpen, setMoreOpen] = useState(false)
   const [stdinLine, setStdinLine] = useState('')
   const [lastStdin, setLastStdin] = useState('')
-  const [pendingJump, setPendingJump] = useState<{ path: string; line: number; column: number } | null>(
-    null
-  )
+  const [pendingJump, setPendingJump] = useState<{
+    path: string
+    line: number
+    column: number
+  } | null>(null)
   const [inputLift, setInputLift] = useState(0)
   const [thumbNorm, setThumbNorm] = useState<{ editor: ThumbNorm; run: ThumbNorm }>({
     editor: { x: 1, y: 1 },
@@ -372,8 +380,8 @@ export default function App(): JSX.Element {
   const treeWidthRef = useRef(TREE_DEFAULT)
   const treeOpenRef = useRef(true)
   const replayNextRef = useRef(false)
-  const examSegRef = useRef<ExamSeg>('mcq')
-  const examPausedRef = useRef(false)
+  const examRef = useRef<ExamSession>(idleSession())
+  const localeRef = useRef<Locale>('zh')
   const sessionStdinRef = useRef('')
   const stdinRef = useRef<HTMLTextAreaElement | null>(null)
   const findRef = useRef<HTMLInputElement | null>(null)
@@ -403,6 +411,23 @@ export default function App(): JSX.Element {
   const themeId: ThemeId = settings?.theme ?? 'paper'
   const locale: Locale = settings?.locale ?? 'zh'
   const tr = useCallback((key: Msg) => t(locale, key), [locale])
+  const examMode = exam.active
+  const examSeg = exam.seg
+  const examPaused = exam.paused
+  const examMcqLeft = exam.mcqRemainingMs
+  const examFrqLeft = exam.frqRemainingMs
+
+  const applyExam = useCallback(
+    async (event: ExamEvent): Promise<ExamSession> => {
+      const tick = reduce(examRef.current, event)
+      if (tick.justZeroed) setStatusMsg(tr('examSegDone'))
+      const saved = await window.jcat.exam.saveSession(tick.session)
+      examRef.current = saved
+      setExam(saved)
+      return saved
+    },
+    [tr]
+  )
 
   const currentCode = openFile ? (buffers[openFile] ?? '') : ''
   const fileName = openFile ? openFile.split(/[/\\]/).pop() || openFile : ''
@@ -463,7 +488,17 @@ export default function App(): JSX.Element {
     const offExit = window.jcat.java.onExit((code) => {
       setRunning(false)
       if (sessionStdinRef.current) setLastStdin(sessionStdinRef.current)
-      setOutput((prev) => prev + `\n进程结束，退出码 ${code ?? 'null'}\n`)
+      setOutput(
+        (prev) =>
+          prev +
+          `\n${t(localeRef.current, 'processEnded').replace('{code}', String(code ?? 'null'))}\n`
+      )
+    })
+    const offNotice = window.jcat.java.onNotice((code) => {
+      setOutput(
+        (prev) =>
+          `${prev}${prev.endsWith('\n') || !prev ? '' : '\n'}${formatNotice((k) => t(localeRef.current, k), code)}\n`
+      )
     })
     const offChunk = window.jcat.ai.onDebugChunk((chunk) => {
       if (chunk.kind === 'reasoning') setDebugReasoning((prev) => prev + chunk.text)
@@ -486,14 +521,12 @@ export default function App(): JSX.Element {
       setLastCompileOk(result.ok)
       setMains(result.mainClasses)
       setMainClass((current) =>
-        current && result.mainClasses.includes(current)
-          ? current
-          : result.mainClasses[0] || current
+        current && result.mainClasses.includes(current) ? current : result.mainClasses[0] || current
       )
     })
     const offMax = window.jcat.window.onMaximized(setWinMaximized)
     onGhostError((message) => {
-      if (message) setStatusMsg(message)
+      if (message) setStatusMsg(formatAiError((k) => t(localeRef.current, k), message))
     })
     onGhostWhy((why) => {
       const editor = editorRef.current
@@ -550,16 +583,35 @@ export default function App(): JSX.Element {
           } else if (list[0]) setMainClass(list[0])
         }
       }
+      setOutput(t(s.locale, 'ready'))
+      if (s.secretError === 'SECRET_UNAVAILABLE') setStatusMsg(t(s.locale, 'secretUnavailable'))
+      else if (s.secretError === 'SECRET_CORRUPT') setStatusMsg(t(s.locale, 'secretCorrupt'))
+      else if (s.secretStorage === 'legacy' && s.hasApiKey)
+        setStatusMsg(t(s.locale, 'secretLegacy'))
+      const session = await window.jcat.exam.getSession()
+      if (session.active) {
+        const tick = reduce(session, { type: 'tick', now: Date.now() })
+        const saved = await window.jcat.exam.saveSession(tick.session)
+        examRef.current = saved
+        setExam(saved)
+        if (tick.justZeroed) setStatusMsg(t(s.locale, 'examSegDone'))
+        setExamAsk(true)
+      }
     })()
     return () => {
       offData()
       offTrace()
       offExit()
+      offNotice()
       offChunk()
       offCompiled()
       offMax()
     }
   }, [])
+
+  useEffect(() => {
+    localeRef.current = locale
+  }, [locale])
 
   useEffect(() => {
     const monacoApi = monacoRef.current
@@ -576,10 +628,6 @@ export default function App(): JSX.Element {
     editor.focus()
     setPendingJump(null)
   }, [openFile, pendingJump])
-
-  useEffect(() => {
-    if (!openFile) setDebugSel(null)
-  }, [openFile])
 
   useEffect(() => {
     if (running && stage === 'run') stdinRef.current?.focus()
@@ -768,6 +816,10 @@ export default function App(): JSX.Element {
   const startPractice = useCallback(
     async (kind: 'hello' | 'scanner'): Promise<void> => {
       const created = await window.jcat.workspace.createPractice(kind)
+      if (!created) {
+        setStatusMsg(tr('examLocked'))
+        return
+      }
       await loadProject(created.root, created.file)
       setStatusMsg(tr('fileCreated'))
     },
@@ -778,6 +830,10 @@ export default function App(): JSX.Element {
     async (kind: FrqKind): Promise<void> => {
       setFrqOpen(false)
       const created = await window.jcat.workspace.createFrq(kind)
+      if (!created) {
+        setStatusMsg(tr('examLocked'))
+        return
+      }
       await loadProject(created.root, created.file)
       setStatusMsg(tr('fileCreated'))
     },
@@ -792,7 +848,7 @@ export default function App(): JSX.Element {
       return
     }
     await loadProject(restored)
-  }, [loadProject, openFolder, settings?.lastRoot])
+  }, [loadProject, openFolder, settings])
 
   const openPath = useCallback(
     async (path: string, text?: string): Promise<void> => {
@@ -853,28 +909,31 @@ export default function App(): JSX.Element {
     setFindIndex(0)
   }, [])
 
-  const paintFind = useCallback((query: string, index: number): void => {
-    const editor = editorRef.current
-    const model = editor?.getModel()
-    if (!editor || !model || !query) {
-      clearFind()
-      return
-    }
-    const matches = model.findMatches(query, true, false, false, null, true)
-    findRangesRef.current = matches.map((item) => item.range)
-    const safe = matches.length ? ((index % matches.length) + matches.length) % matches.length : 0
-    findDecosRef.current = editor.deltaDecorations(
-      findDecosRef.current,
-      matches.map((item, i) => ({
-        range: item.range,
-        options: { className: i === safe ? 'jcat-find-on' : 'jcat-find' }
-      }))
-    )
-    const hit = findRangesRef.current[safe]
-    if (hit) editor.revealRangeInCenter(hit)
-    setFindTotal(matches.length)
-    setFindIndex(safe)
-  }, [clearFind])
+  const paintFind = useCallback(
+    (query: string, index: number): void => {
+      const editor = editorRef.current
+      const model = editor?.getModel()
+      if (!editor || !model || !query) {
+        clearFind()
+        return
+      }
+      const matches = model.findMatches(query, true, false, false, null, true)
+      findRangesRef.current = matches.map((item) => item.range)
+      const safe = matches.length ? ((index % matches.length) + matches.length) % matches.length : 0
+      findDecosRef.current = editor.deltaDecorations(
+        findDecosRef.current,
+        matches.map((item, i) => ({
+          range: item.range,
+          options: { className: i === safe ? 'jcat-find-on' : 'jcat-find' }
+        }))
+      )
+      const hit = findRangesRef.current[safe]
+      if (hit) editor.revealRangeInCenter(hit)
+      setFindTotal(matches.length)
+      setFindIndex(safe)
+    },
+    [clearFind]
+  )
 
   const formatCurrent = useCallback((): void => {
     if (!openFile || !openFile.toLowerCase().endsWith('.java')) return
@@ -894,12 +953,9 @@ export default function App(): JSX.Element {
   }, [buffers, openFile, tr])
 
   useEffect(() => {
-    if (!findOpen) {
-      clearFind()
-      return
-    }
+    if (!findOpen) return
     paintFind(findQuery, 0)
-  }, [clearFind, findOpen, openFile, paintFind])
+  }, [findOpen, findQuery, openFile, paintFind])
 
   const newFile = useCallback(async (): Promise<void> => {
     if (!root) {
@@ -939,6 +995,10 @@ export default function App(): JSX.Element {
     }
     if (nameAsk.kind === 'project') {
       const created = await window.jcat.workspace.createEmpty(raw)
+      if (!created) {
+        setStatusMsg(tr('examLocked'))
+        return
+      }
       setNameAsk(null)
       await loadProject(created.root)
       setStatusMsg(tr('folderCreated'))
@@ -965,6 +1025,10 @@ export default function App(): JSX.Element {
   }, [loadProject, nameAsk, openPath, refreshTree, root, tr])
 
   const compile = useCallback(async (): Promise<boolean> => {
+    if (examRef.current.active && examRef.current.seg === 'mcq') {
+      setStatusMsg(tr('examLocked'))
+      return false
+    }
     await saveAllDirty()
     setStatusMsg(tr('compiling'))
     const result = await window.jcat.java.compile()
@@ -973,7 +1037,10 @@ export default function App(): JSX.Element {
     setMainClass((current) =>
       pickMain(openFile, openFile ? (buffers[openFile] ?? '') : '', result.mainClasses, current)
     )
-    setOutput(result.output + '\n')
+    setOutput(
+      formatCompile(tr, result) +
+        (result.output && result.notice ? `\n${result.output}` : result.notice ? '\n' : '\n')
+    )
     setLastCompileOk(result.ok)
     if (result.ok) {
       setStatusMsg(tr('compileOk'))
@@ -986,6 +1053,10 @@ export default function App(): JSX.Element {
   }, [buffers, examMode, openFile, saveAllDirty, tr])
 
   const run = useCallback(async (): Promise<void> => {
+    if (examRef.current.active && examRef.current.seg === 'mcq') {
+      setStatusMsg(tr('examLocked'))
+      return
+    }
     await saveAllDirty()
     const replay = replayNextRef.current ? lastStdin : undefined
     replayNextRef.current = false
@@ -1014,7 +1085,10 @@ export default function App(): JSX.Element {
     sessionStdinRef.current += `${line}\n`
     await window.jcat.java.writeStdin(line)
     setOutput((prev) => {
-      const shown = line.split('\n').map((row) => `› ${row}`).join('\n')
+      const shown = line
+        .split('\n')
+        .map((row) => `› ${row}`)
+        .join('\n')
       return `${prev}${prev.endsWith('\n') || !prev ? '' : '\n'}${shown}\n`
     })
   }, [running, stdinLine])
@@ -1067,7 +1141,7 @@ export default function App(): JSX.Element {
       setStatusMsg(tr('ghostOff'))
       return
     }
-    if (!settings.apiKey) {
+    if (!settings.hasApiKey) {
       setSettingsOpen(true)
       setStatusMsg(tr('needKey'))
       return
@@ -1077,23 +1151,25 @@ export default function App(): JSX.Element {
     setInlineCompletionEnabled(!examMode)
     setStatusMsg(tr('ghostOn'))
     if (!examMode) {
-      window.setTimeout(() => {
-        editorRef.current?.focus()
-        editorRef.current?.trigger('jcat', 'editor.action.inlineSuggest.trigger', {})
-      }, Math.max(80, saved.completionDelayMs || 400) + 40)
+      window.setTimeout(
+        () => {
+          editorRef.current?.focus()
+          editorRef.current?.trigger('jcat', 'editor.action.inlineSuggest.trigger', {})
+        },
+        Math.max(80, saved.completionDelayMs || 400) + 40
+      )
     }
   }
 
   const runDebug = async (): Promise<void> => {
-    if (!settings?.apiKey) {
+    if (!settings?.hasApiKey) {
       setSettingsOpen(true)
       setStatusMsg(tr('needKey'))
       return
     }
+    if (examMode) return
     setSideOpen(true)
     setDebugging(true)
-    setDebugText('')
-    setDebugReasoning('')
     debugLineJumpedRef.current = false
     const err = diagnostics.find((item) => item.severity === 'error')
     if (err && !debugSel) void jumpTo(err.file, err.line, err.column)
@@ -1114,10 +1190,16 @@ export default function App(): JSX.Element {
           : {})
       })
     } catch (e) {
-      setDebugText((e as Error).message)
+      const code = (e as Error).message
+      if (code !== 'AI_ABORTED') setDebugText((prev) => prev || formatAiError(tr, code))
     } finally {
       setDebugging(false)
     }
+  }
+
+  const stopDebug = (): void => {
+    void window.jcat.ai.debugAbort()
+    setDebugging(false)
   }
 
   const exportImage = async (): Promise<void> => {
@@ -1133,8 +1215,7 @@ export default function App(): JSX.Element {
     setStatusMsg(tr('exporting'))
     try {
       const card = THEME_CARDS.find((item) => item.id === themeId)
-      const cls =
-        publicClassInfo(currentCode)?.name || fileName.replace(/\.java$/i, '') || 'Main'
+      const cls = publicClassInfo(currentCode)?.name || fileName.replace(/\.java$/i, '') || 'Main'
       const dataUrl = await renderCodePng(monacoApi, code, {
         className: cls,
         fileName: fileName || 'code.java',
@@ -1156,7 +1237,7 @@ export default function App(): JSX.Element {
         runLabel: tr('runExcerpt')
       })
       const savedPath = await window.jcat.exportImage.savePng(dataUrl, `${cls}.png`)
-      setStatusMsg(savedPath ? `已导出 ${savedPath}` : tr('exportCancel'))
+      setStatusMsg(savedPath ? tr('exportSaved').replace('{path}', savedPath) : tr('exportCancel'))
     } catch (err) {
       setStatusMsg((err as Error).message)
     } finally {
@@ -1167,6 +1248,27 @@ export default function App(): JSX.Element {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const meta = e.metaKey || e.ctrlKey
+      const ex = examRef.current
+      if (ex.active) {
+        if (meta && (e.key.toLowerCase() === 'o' || e.key.toLowerCase() === 'n')) {
+          e.preventDefault()
+          setStatusMsg(tr('examLocked'))
+          return
+        }
+        if (
+          ex.seg === 'mcq' &&
+          ((meta &&
+            (e.key.toLowerCase() === 's' ||
+              e.key.toLowerCase() === 'b' ||
+              e.key.toLowerCase() === 'f')) ||
+            e.key === 'F5' ||
+            (e.altKey && e.shiftKey && e.key.toLowerCase() === 'f'))
+        ) {
+          e.preventDefault()
+          setStatusMsg(tr('examLocked'))
+          return
+        }
+      }
       if (meta && e.key.toLowerCase() === 's') {
         e.preventDefault()
         void saveCurrent()
@@ -1218,7 +1320,20 @@ export default function App(): JSX.Element {
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [clearFind, closeTab, compile, findOpen, formatCurrent, newFile, openFile, openFolder, run, saveCurrent, stop])
+  }, [
+    clearFind,
+    closeTab,
+    compile,
+    findOpen,
+    formatCurrent,
+    newFile,
+    openFile,
+    openFolder,
+    run,
+    saveCurrent,
+    stop,
+    tr
+  ])
 
   const jdkLabel = useMemo(() => {
     if (!toolchain) return 'JDK …'
@@ -1237,7 +1352,10 @@ export default function App(): JSX.Element {
     setThumbDragging(null)
   }, [])
 
-  const onThumbPointerDown = (key: 'editor' | 'run', e: ReactPointerEvent<HTMLDivElement>): void => {
+  const onThumbPointerDown = (
+    key: 'editor' | 'run',
+    e: ReactPointerEvent<HTMLDivElement>
+  ): void => {
     if (e.button !== 0) return
     if (key === 'editor' && editorKind !== 'thumb') return
     if (key === 'run' && runKind !== 'thumb') return
@@ -1264,7 +1382,10 @@ export default function App(): JSX.Element {
     }, THUMB_LONG_MS)
   }
 
-  const onThumbPointerMove = (key: 'editor' | 'run', e: ReactPointerEvent<HTMLDivElement>): void => {
+  const onThumbPointerMove = (
+    key: 'editor' | 'run',
+    e: ReactPointerEvent<HTMLDivElement>
+  ): void => {
     const press = thumbPressRef.current
     if (press && press.key === key && !thumbDragRef.current) {
       const dist = Math.hypot(e.clientX - press.startX, e.clientY - press.startY)
@@ -1311,27 +1432,26 @@ export default function App(): JSX.Element {
   }, [examMode, settings?.completionEnabled])
 
   useEffect(() => {
-    examSegRef.current = examSeg
-  }, [examSeg])
+    examRef.current = exam
+  }, [exam])
 
   useEffect(() => {
-    examPausedRef.current = examPaused
-  }, [examPaused])
-
-  useEffect(() => {
-    if (!examMode) return
-    const id = window.setInterval(() => {
-      if (examPausedRef.current) return
-      const tick = (ms: number): number => {
-        const next = Math.max(0, ms - 1000)
-        if (ms > 0 && next === 0) setStatusMsg(tr('examSegDone'))
-        return next
-      }
-      if (examSegRef.current === 'mcq') setExamMcqLeft(tick)
-      else setExamFrqLeft(tick)
-    }, 1000)
-    return () => window.clearInterval(id)
-  }, [examMode, tr])
+    if (!exam.active) return
+    const pulse = (): void => {
+      void applyExam({ type: 'tick', now: Date.now() })
+    }
+    const id = window.setInterval(pulse, 500)
+    const onVis = (): void => {
+      if (document.visibilityState === 'visible') pulse()
+    }
+    window.addEventListener('focus', pulse)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('focus', pulse)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [applyExam, exam.active])
 
   useEffect(() => {
     const editor = editorRef.current
@@ -1387,28 +1507,47 @@ export default function App(): JSX.Element {
   const toggleExam = (): void => {
     setExamSwitching(true)
     window.setTimeout(() => {
-      setExamMode((on) => {
-        const next = !on
-        if (next) {
+      void (async () => {
+        if (!examRef.current.active) {
+          void window.jcat.ai.completeAbort()
+          void window.jcat.ai.debugAbort()
+          void window.jcat.java.stop()
+          setDebugging(false)
+          setDebugText('')
+          setDebugReasoning('')
           setSideOpen(false)
-          setExamSeg('mcq')
-          setExamMcqLeft(EXAM_SEG_MS)
-          setExamFrqLeft(EXAM_SEG_MS)
-          setExamPaused(false)
-          setExamReport(null)
-          setExamRefOpen(false)
           setSettingsOpen(false)
           setMoreOpen(false)
           setLangOpen(false)
           setFrqOpen(false)
+          setExamRefOpen(false)
+          setExamReport(null)
+          let baseline: Record<string, string[]> = {}
+          try {
+            baseline = await window.jcat.exam.scanAp()
+          } catch {
+            baseline = {}
+          }
+          await applyExam({
+            type: 'start',
+            now: Date.now(),
+            projectRoot: root || '',
+            baseline
+          })
           setStatusMsg(tr('examReady'))
         } else {
+          let current: Record<string, string[]> = {}
+          try {
+            current = await window.jcat.exam.scanAp()
+          } catch {
+            current = {}
+          }
           setExamRefOpen(false)
-          setExamReport(collectExamOut(buffers))
+          setExamReport(addedTokens(examRef.current.baseline, current))
+          await applyExam({ type: 'finish' })
           setStatusMsg(tr('examLeft'))
         }
-        return next
-      })
+      })()
     }, 240)
     window.setTimeout(() => setExamSwitching(false), 780)
   }
@@ -1417,30 +1556,38 @@ export default function App(): JSX.Element {
     if (next === examSeg) return
     setExamSwitching(true)
     window.setTimeout(() => {
-      setExamSeg(next)
+      void applyExam({ type: 'switch', now: Date.now(), seg: next })
       if (next === 'mcq') setExamRefOpen(false)
     }, 220)
     window.setTimeout(() => setExamSwitching(false), 780)
   }
 
   const toggleExamPause = (): void => {
-    setExamPaused((on) => {
-      const next = !on
-      setStatusMsg(next ? tr('examPaused') : tr('examClock'))
-      return next
-    })
+    const pausing = !examRef.current.paused
+    void applyExam({ type: pausing ? 'pause' : 'resume', now: Date.now() })
+    setStatusMsg(pausing ? tr('examPaused') : tr('examClock'))
   }
 
   const restartExam = (): void => {
-    setExamPaused(false)
-    setExamMcqLeft(EXAM_SEG_MS)
-    setExamFrqLeft(EXAM_SEG_MS)
-    setExamSeg('mcq')
     setExamRefOpen(false)
     setExamReport(null)
     setExamSwitching(true)
+    void (async () => {
+      let baseline: Record<string, string[]> = {}
+      try {
+        baseline = await window.jcat.exam.scanAp()
+      } catch {
+        baseline = {}
+      }
+      await applyExam({
+        type: 'restart',
+        now: Date.now(),
+        projectRoot: root || '',
+        baseline
+      })
+      setStatusMsg(tr('examReady'))
+    })()
     window.setTimeout(() => setExamSwitching(false), 780)
-    setStatusMsg(tr('examReady'))
   }
 
   const changeLocale = (next: Locale): void => {
@@ -1578,13 +1725,16 @@ export default function App(): JSX.Element {
             : undefined
       }
     >
-      <div className="exam-veil" aria-hidden />
       <header
         className="titlebar"
         onDoubleClick={(e) => {
           if (window.jcat.platform === 'darwin') return
           const target = e.target as HTMLElement
-          if (target.closest('button, a, input, select, .anim-select, .more-menu, .lang-menu, .window-controls'))
+          if (
+            target.closest(
+              'button, a, input, select, .anim-select, .more-menu, .lang-menu, .window-controls'
+            )
+          )
             return
           void window.jcat.window.maximize()
         }}
@@ -1594,24 +1744,26 @@ export default function App(): JSX.Element {
           <h1>Jcat</h1>
         </div>
         <div className="actions">
-          <button className="primary" onClick={() => void run()} disabled={!root || running}>
-            {tr('run')}
-          </button>
-          {running ? (
-            <button onClick={() => void stop()}>{tr('stop')}</button>
-          ) : null}
-          <button onClick={() => void compile()} disabled={!root}>
-            {tr('compile')}
-          </button>
-          <AnimSelect
-            value={mainClass}
-            disabled={!runOptions.length}
-            title={tr('runPick')}
-            placeholder={tr('noMain')}
-            className="run-select"
-            options={runOptions.map((item) => ({ id: item, label: item }))}
-            onChange={setMainClass}
-          />
+          {examMode && examSeg === 'mcq' ? null : (
+            <>
+              <button className="primary" onClick={() => void run()} disabled={!root || running}>
+                {tr('run')}
+              </button>
+              {running ? <button onClick={() => void stop()}>{tr('stop')}</button> : null}
+              <button onClick={() => void compile()} disabled={!root}>
+                {tr('compile')}
+              </button>
+              <AnimSelect
+                value={mainClass}
+                disabled={!runOptions.length}
+                title={tr('runPick')}
+                placeholder={tr('noMain')}
+                className="run-select"
+                options={runOptions.map((item) => ({ id: item, label: item }))}
+                onChange={setMainClass}
+              />
+            </>
+          )}
         </div>
         <div className="title-end">
           {examMode ? (
@@ -1745,16 +1897,18 @@ export default function App(): JSX.Element {
                     {tr('open')}
                   </button>
                 )}
-                <button
-                  type="button"
-                  disabled={!openFile}
-                  onClick={() => {
-                    setMoreOpen(false)
-                    void saveCurrent()
-                  }}
-                >
-                  {tr('save')}
-                </button>
+                {examMode && examSeg === 'mcq' ? null : (
+                  <button
+                    type="button"
+                    disabled={!openFile}
+                    onClick={() => {
+                      setMoreOpen(false)
+                      void saveCurrent()
+                    }}
+                  >
+                    {tr('save')}
+                  </button>
+                )}
                 {examMode ? null : (
                   <button
                     type="button"
@@ -1782,7 +1936,9 @@ export default function App(): JSX.Element {
                       })()
                     }}
                   >
-                    {settings?.homeworkHideLines ? tr('homeworkShowLines') : tr('homeworkHideLines')}
+                    {settings?.homeworkHideLines
+                      ? tr('homeworkShowLines')
+                      : tr('homeworkHideLines')}
                   </button>
                 )}
                 {examMode ? null : (
@@ -1879,6 +2035,7 @@ export default function App(): JSX.Element {
       )}
 
       <section className={`stage ${examMode && examSeg === 'mcq' ? 'is-mcq' : ''}`} ref={stageRef}>
+        <div className="exam-veil" aria-hidden />
         <div className="exam-mcq-stage">
           <p className="exam-mcq-label">{tr('examMcqNow')}</p>
           <div className={`exam-mcq-clock ${examPaused ? 'is-paused' : ''}`}>
@@ -2143,16 +2300,14 @@ export default function App(): JSX.Element {
             <button type="submit" disabled={!running}>
               Enter
             </button>
-            <button
-              type="button"
-              disabled={!lastStdin.trim()}
-              onClick={() => replayInput()}
-            >
+            <button type="button" disabled={!lastStdin.trim()} onClick={() => replayInput()}>
               {tr('replayInput')}
             </button>
           </form>
         </div>
-        {examMode ? <ExamReference locale={locale} open={examRefOpen && examSeg === 'frq'} t={tr} /> : null}
+        {examMode ? (
+          <ExamReference locale={locale} open={examRefOpen && examSeg === 'frq'} t={tr} />
+        ) : null}
       </section>
 
       <SidePanel
@@ -2172,6 +2327,7 @@ export default function App(): JSX.Element {
         }
         onNote={setDebugNote}
         onAnalyze={() => void runDebug()}
+        onStop={stopDebug}
       />
       {examMode ? null : (
         <button
@@ -2203,6 +2359,43 @@ export default function App(): JSX.Element {
         <span>{examMode ? tr('examMode') : root ? root : tr('noProject')}</span>
       </footer>
 
+      {examAsk ? (
+        <ModalShell open onClose={() => undefined} className="name-modal">
+          <h3>{tr('examMode')}</h3>
+          <p className="ap-blurb">{tr('examResumeAsk')}</p>
+          <div className="modal-actions">
+            <button
+              type="button"
+              onClick={() => {
+                setExamAsk(false)
+                void applyExam({ type: 'tick', now: Date.now() })
+              }}
+            >
+              {tr('examResumeContinue')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setExamAsk(false)
+                restartExam()
+              }}
+            >
+              {tr('examResumeRestart')}
+            </button>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => {
+                setExamAsk(false)
+                void applyExam({ type: 'abandon' })
+              }}
+            >
+              {tr('examResumeAbandon')}
+            </button>
+          </div>
+        </ModalShell>
+      ) : null}
+
       {settings ? (
         <SettingsModal
           open={settingsOpen}
@@ -2215,7 +2408,8 @@ export default function App(): JSX.Element {
             void window.jcat.settings.save({ theme: id })
           }}
           onSave={async (next) => {
-            const savedSettings = await window.jcat.settings.save(next)
+            await window.jcat.settings.save(next)
+            const savedSettings = await window.jcat.settings.get()
             setSettings(savedSettings)
             applyTheme(savedSettings.theme)
             setInlineCompletionEnabled(savedSettings.completionEnabled && !examMode)
@@ -2273,11 +2467,7 @@ export default function App(): JSX.Element {
           </button>
         </div>
       </ModalShell>
-      <ModalShell
-        open={frqOpen}
-        onClose={() => setFrqOpen(false)}
-        className="name-modal frq-modal"
-      >
+      <ModalShell open={frqOpen} onClose={() => setFrqOpen(false)} className="name-modal frq-modal">
         <h3>{tr('frqPick')}</h3>
         <div className="frq-picks">
           {(
@@ -2302,7 +2492,7 @@ export default function App(): JSX.Element {
         <h3>{tr('examReport')}</h3>
         {examReport && examReport.length > 0 ? (
           <>
-            <p className="ap-blurb">{tr('examOutList')}</p>
+            <p className="ap-blurb">{tr('examOutAdded')}</p>
             <ul className="exam-out-list">
               {examReport.map((token) => (
                 <li key={token}>

@@ -1,11 +1,13 @@
 import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { dirname, join } from 'path'
-import type { AppSettings, Locale } from '../shared/types'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import type { AppSettings, Locale, PublicSettings } from '../shared/types'
 import { isThemeId } from '../shared/themes'
+import { toPublicSettings } from '../shared/publicSettings'
+import { migrateSecrets, secretStatus } from './secretStore'
+import { atomicWrite } from './atomicWrite'
 
 const defaults: AppSettings = {
-  apiKey: '',
   completionModel: 'deepseek-flash',
   debugModel: 'deepseek-flash',
   debugThinking: false,
@@ -24,30 +26,46 @@ function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
 }
 
+function sanitize(raw: Record<string, unknown>): AppSettings {
+  const locale = raw.locale
+  return {
+    completionModel:
+      typeof raw.completionModel === 'string' ? raw.completionModel : defaults.completionModel,
+    debugModel: typeof raw.debugModel === 'string' ? raw.debugModel : defaults.debugModel,
+    debugThinking: !!raw.debugThinking,
+    jdkHome: typeof raw.jdkHome === 'string' ? raw.jdkHome : '',
+    mavenPath: typeof raw.mavenPath === 'string' ? raw.mavenPath : '',
+    completionEnabled: !!raw.completionEnabled,
+    completionDelayMs:
+      typeof raw.completionDelayMs === 'number' && Number.isFinite(raw.completionDelayMs)
+        ? raw.completionDelayMs
+        : defaults.completionDelayMs,
+    homeworkHideLines: !!raw.homeworkHideLines,
+    apHintsEnabled: raw.apHintsEnabled !== false,
+    lastRoot: typeof raw.lastRoot === 'string' ? raw.lastRoot : '',
+    theme: isThemeId(String(raw.theme)) ? (raw.theme as AppSettings['theme']) : 'paper',
+    locale: locale === 'en' || locale === 'ko' || locale === 'zh' ? locale : 'zh'
+  }
+}
+
 export function loadSettings(): AppSettings {
   try {
-    const raw = readFileSync(settingsPath(), 'utf8')
-    const parsed = { ...defaults, ...JSON.parse(raw) } as AppSettings & {
-      completionMode?: unknown
-    }
-    delete parsed.completionMode
-    if (!isThemeId(parsed.theme)) parsed.theme = 'paper'
-    if (parsed.locale !== 'zh' && parsed.locale !== 'en' && parsed.locale !== 'ko') {
-      parsed.locale = 'zh'
-    }
-    parsed.homeworkHideLines = !!parsed.homeworkHideLines
-    parsed.apHintsEnabled = parsed.apHintsEnabled !== false
-    return parsed
+    const raw = JSON.parse(readFileSync(settingsPath(), 'utf8')) as Record<string, unknown>
+    return sanitize(raw)
   } catch {
     return { ...defaults }
   }
 }
 
 export function saveSettings(partial: Partial<AppSettings>): AppSettings {
-  const next = { ...loadSettings(), ...partial } as AppSettings & { completionMode?: unknown }
-  delete next.completionMode
+  const next = sanitize({ ...loadSettings(), ...partial })
   const file = settingsPath()
-  if (!existsSync(dirname(file))) mkdirSync(dirname(file), { recursive: true })
-  writeFileSync(file, JSON.stringify(next, null, 2), 'utf8')
-  return next as AppSettings
+  atomicWrite(file, JSON.stringify(next, null, 2))
+  return next
+}
+
+export function publicSettings(): PublicSettings {
+  migrateSecrets()
+  const secret = secretStatus()
+  return toPublicSettings(loadSettings(), secret)
 }

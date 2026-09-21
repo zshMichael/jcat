@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -14,6 +15,9 @@ import {
 import { basename, dirname, extname, join, relative, sep } from 'path'
 import { homedir } from 'os'
 import type { FileNode } from '../shared/types'
+import { isInsideDir } from '../shared/fsGuard'
+import { loadSettings } from './settings'
+import { dialogCopy } from './nativeDialogs'
 
 const SKIP = new Set([
   '.git',
@@ -39,11 +43,12 @@ export function setRoot(root: string | null): void {
 export async function pickFolder(win: BrowserWindow): Promise<string | null> {
   const home = join(homedir(), 'Jcat')
   mkdirSync(home, { recursive: true })
+  const copy = dialogCopy(loadSettings().locale)
   const result = await dialog.showOpenDialog(win, {
-    title: '打开或新建文件夹',
+    title: copy.openFolder,
     defaultPath: currentRoot || home,
-    buttonLabel: '打开',
-    message: '选择一个文件夹，或在对话框里新建。',
+    buttonLabel: copy.open,
+    message: copy.openFolderMsg,
     properties: ['openDirectory', 'createDirectory', 'promptToCreate']
   })
   if (result.canceled || !result.filePaths[0]) return null
@@ -78,6 +83,47 @@ export function readTree(dir = currentRoot, depth = 0): FileNode[] {
     nodes.push(node)
   }
   return nodes
+}
+
+export function readJavaSources(): Array<{ path: string; text: string }> {
+  const root = currentRoot
+  if (!root || !existsSync(root)) return []
+  const out: Array<{ path: string; text: string }> = []
+  const walk = (dir: string, depth: number): void => {
+    if (depth > 12) return
+    let names: string[]
+    try {
+      names = readdirSync(dir)
+    } catch {
+      return
+    }
+    for (const name of names) {
+      if (name.startsWith('.') && name !== '.gitignore') continue
+      if (SKIP.has(name) || name.endsWith('.class')) continue
+      const path = join(dir, name)
+      let st: Stats
+      try {
+        st = statSync(path)
+      } catch {
+        continue
+      }
+      if (st.isDirectory()) {
+        walk(path, depth + 1)
+        continue
+      }
+      if (!name.toLowerCase().endsWith('.java')) continue
+      try {
+        const realRoot = realpathSync(root)
+        const realFile = realpathSync(path)
+        if (!isInsideDir(realRoot, realFile)) continue
+        out.push({ path: realFile, text: readFileSync(realFile, 'utf8') })
+      } catch {
+        /* skip unreadable files; exam report must not crash */
+      }
+    }
+  }
+  walk(root, 0)
+  return out
 }
 
 export function readText(file: string): string {
@@ -321,4 +367,3 @@ export function createFrq(kind: FrqKind): { root: string; file: string } {
   currentRoot = folder
   return { root: folder, file }
 }
-

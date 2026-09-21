@@ -151,7 +151,59 @@ const zh = {
   examPause: '暂停',
   examResume: '继续',
   examRestart: '重启考试',
-  examPaused: '已暂停'
+  examPaused: '已暂停',
+  examOutAdded: '本次考试新增的超纲 API',
+  examResumeAsk: '检测到未结束的考试。要继续、重新开始，还是放弃？',
+  examResumeContinue: '继续考试',
+  examResumeRestart: '重新开始',
+  examResumeAbandon: '放弃该考试',
+  examLocked: '考试期间不能使用这项功能。',
+  debugStop: '停止',
+  mavenMissing: '没有找到 Maven。请在设置里填写 mvn 路径，或安装 Maven。',
+  noJavaFiles: '这个文件夹里没有 .java 文件。',
+  mavenOk: 'Maven compile 成功。',
+  mavenFail: 'Maven compile 失败。',
+  javacOk: 'javac 成功，{n} 个源文件。',
+  javacFail: 'javac 失败。',
+  javaMissing: '没有找到 java 命令。',
+  exportSaved: '已导出 {path}',
+  processEnded: '进程结束，退出码 {code}',
+  apiPrivacy:
+    '只有你打开补写或 AI Debug 时，相关代码才会直接发给 DeepSeek。编译运行始终在本机。没有 Key 也可以用。',
+  secretUnavailable:
+    '系统提供的用户级加密不可用，Key 未写入 secrets.bin。旧明文（如有）仍留在本机设置文件中。',
+  secretLegacy:
+    '仍在使用旧版明文 Key，尚未完成安全迁移。请打开设置保存一次以迁移。不会显示完整 Key。',
+  secretCorrupt: '本地密文无法解密。旧明文 Key 仍保留在设置文件中，没有删除。',
+  secretVerify: '写入密文后回读失败，旧明文 Key 未删除。请稍后重试保存。',
+  secretOk: 'API Key 已用系统提供的用户级加密保存在本机 secrets.bin，不是明文。',
+  clearKey: '清除 Key',
+  aiNeedKey: '还没有填写 DeepSeek API Key。打开设置即可。',
+  aiUnauthorized: 'API Key 无效或已过期。',
+  aiForbidden: '没有权限调用该模型。',
+  aiRateLimit: '请求太频繁，请稍后再试。',
+  aiServer: 'DeepSeek 服务暂时不可用。',
+  aiHttp: '补全或分析请求失败。',
+  aiAborted: '已取消。',
+  aiTimeout: '等待回复超时。',
+  aiNetwork: '网络中断，请检查连接。',
+  aiUnknown: '分析失败。',
+  themePaper: '宣纸',
+  themePaperBlurb: '浅色 · 暖',
+  themeMacaron: '马卡龙',
+  themeMacaronBlurb: '浅色 · 柔',
+  themePistachio: '开心果',
+  themePistachioBlurb: '浅色 · 清',
+  themePeach: '蜜桃',
+  themePeachBlurb: '浅色 · 甜',
+  themeLemon: '柠檬糖',
+  themeLemonBlurb: '浅色 · 亮',
+  themeBlueberry: '蓝莓奶',
+  themeBlueberryBlurb: '浅色 · 冷',
+  themeInk: '墨夜',
+  themeInkBlurb: '深色 · 暖',
+  themeCeladon: '青釉',
+  themeCeladonBlurb: '深色 · 冷'
 } as const
 
 const en: Record<keyof typeof zh, string> = {
@@ -193,7 +245,8 @@ const en: Record<keyof typeof zh, string> = {
   disableGhost: 'Disable ghost write',
   examMode: 'Exam mode',
   exitExam: 'Exit exam',
-  examReady: 'Exam mode: project and notes hidden. MC and FRQ are 90 minutes each; switch anytime. Ghost write is off.',
+  examReady:
+    'Exam mode: project and notes hidden. MC and FRQ are 90 minutes each; switch anytime. Ghost write is off.',
   examLeft: 'Left exam mode.',
   ghostOn: 'Ghost write on: continues what you are typing',
   ghostOff: 'Ghost write off',
@@ -305,7 +358,62 @@ const en: Record<keyof typeof zh, string> = {
   examPause: 'Pause',
   examResume: 'Resume',
   examRestart: 'Restart exam',
-  examPaused: 'Paused'
+  examPaused: 'Paused',
+  examOutAdded: 'Off-exam APIs added during this exam',
+  examResumeAsk: 'An unfinished exam was found. Continue, restart, or discard it?',
+  examResumeContinue: 'Continue exam',
+  examResumeRestart: 'Restart',
+  examResumeAbandon: 'Discard exam',
+  examLocked: 'That action is blocked during an exam.',
+  debugStop: 'Stop',
+  mavenMissing: 'Maven not found. Set the mvn path in Settings, or install Maven.',
+  noJavaFiles: 'This folder has no .java files.',
+  mavenOk: 'Maven compile succeeded.',
+  mavenFail: 'Maven compile failed.',
+  javacOk: 'javac succeeded, {n} source files.',
+  javacFail: 'javac failed.',
+  javaMissing: 'The java command was not found.',
+  exportSaved: 'Exported {path}',
+  processEnded: 'Process ended, exit code {code}',
+  apiPrivacy:
+    'Code is sent to DeepSeek only if you turn on ghost write or AI Debug. Compile and run stay on this computer. You can skip the API key.',
+  secretUnavailable:
+    'OS user-level encryption is unavailable. The key was not written to secrets.bin. Any old plaintext stays in the local settings file.',
+  secretLegacy:
+    'A plaintext key from an older Jcat is still present; secure migration is not finished. Save Settings once to migrate. The full key is never shown here.',
+  secretCorrupt:
+    'The local ciphertext could not be decrypted. The old plaintext key was not deleted.',
+  secretVerify:
+    'The ciphertext could not be read back after writing. The old plaintext key was not deleted. Try saving again later.',
+  secretOk:
+    'The API key is stored on this computer in secrets.bin, encrypted with OS user-level encryption (not plaintext).',
+  clearKey: 'Clear key',
+  aiNeedKey: 'Add a DeepSeek API key in Settings first.',
+  aiUnauthorized: 'The API key is invalid or expired.',
+  aiForbidden: 'This model is not allowed for the key.',
+  aiRateLimit: 'Too many requests. Try again in a moment.',
+  aiServer: 'DeepSeek is temporarily unavailable.',
+  aiHttp: 'The AI request failed.',
+  aiAborted: 'Canceled.',
+  aiTimeout: 'The AI request timed out.',
+  aiNetwork: 'Network error. Check the connection.',
+  aiUnknown: 'Analysis failed.',
+  themePaper: 'Xuan paper',
+  themePaperBlurb: 'Light · warm',
+  themeMacaron: 'Macaron',
+  themeMacaronBlurb: 'Light · soft',
+  themePistachio: 'Pistachio',
+  themePistachioBlurb: 'Light · fresh',
+  themePeach: 'Peach',
+  themePeachBlurb: 'Light · sweet',
+  themeLemon: 'Lemon drop',
+  themeLemonBlurb: 'Light · bright',
+  themeBlueberry: 'Blueberry milk',
+  themeBlueberryBlurb: 'Light · cool',
+  themeInk: 'Ink night',
+  themeInkBlurb: 'Dark · warm',
+  themeCeladon: 'Celadon',
+  themeCeladonBlurb: 'Dark · cool'
 }
 
 const ko: Record<keyof typeof zh, string> = {
@@ -347,7 +455,8 @@ const ko: Record<keyof typeof zh, string> = {
   disableGhost: '보강 입력 끄기',
   examMode: '시험 모드',
   exitExam: '시험 종료',
-  examReady: '시험 모드: 프로젝트와 자료를 숨겼습니다. 객관식과 서술형은 각 90분, 언제든 전환. 보강 입력은 꺼집니다.',
+  examReady:
+    '시험 모드: 프로젝트와 자료를 숨겼습니다. 객관식과 서술형은 각 90분, 언제든 전환. 보강 입력은 꺼집니다.',
   examLeft: '시험 모드를 종료했습니다.',
   ghostOn: '보강 입력 켜짐: 지금 쓰는 코드 이어서 채움',
   ghostOff: '보강 입력 꺼짐',
@@ -459,7 +568,61 @@ const ko: Record<keyof typeof zh, string> = {
   examPause: '일시정지',
   examResume: '계속',
   examRestart: '시험 다시 시작',
-  examPaused: '일시정지됨'
+  examPaused: '일시정지됨',
+  examOutAdded: '이번 시험에서 새로 쓴 범위 밖 API',
+  examResumeAsk: '끝나지 않은 시험이 있습니다. 계속할까요, 다시 시작할까요, 포기할까요?',
+  examResumeContinue: '시험 계속',
+  examResumeRestart: '다시 시작',
+  examResumeAbandon: '시험 포기',
+  examLocked: '시험 중에는 이 기능을 쓸 수 없습니다.',
+  debugStop: '중지',
+  mavenMissing: 'Maven을 찾지 못했습니다. 설정에 mvn 경로를 넣거나 Maven을 설치하세요.',
+  noJavaFiles: '이 폴더에 .java 파일이 없습니다.',
+  mavenOk: 'Maven 컴파일 성공.',
+  mavenFail: 'Maven 컴파일 실패.',
+  javacOk: 'javac 성공, 소스 {n}개.',
+  javacFail: 'javac 실패.',
+  javaMissing: 'java 명령을 찾지 못했습니다.',
+  exportSaved: '{path}(으)로 내보냄',
+  processEnded: '프로세스 종료, 종료 코드 {code}',
+  apiPrivacy:
+    '보강 입력이나 AI Debug를 켤 때만 관련 코드가 DeepSeek로 갑니다. 컴파일·실행은 이 컴퓨터에서만 합니다. Key 없이 쓸 수 있습니다.',
+  secretUnavailable:
+    'OS 사용자 수준 암호화를 쓸 수 없어 secrets.bin에 Key를 쓰지 않았습니다. 예전 평문이 있으면 설정 파일에 남습니다.',
+  secretLegacy:
+    '이전 버전의 평문 Key가 남아 있으며 보안 이전이 끝나지 않았습니다. 설정에서 한 번 저장하세요. 전체 Key는 표시하지 않습니다.',
+  secretCorrupt: '로컬 암호문을 풀 수 없습니다. 예전 평문 Key는 삭제하지 않았습니다.',
+  secretVerify:
+    '암호문을 쓴 뒤 다시 읽지 못했습니다. 예전 평문 Key는 그대로 있습니다. 나중에 다시 저장하세요.',
+  secretOk:
+    'API Key는 이 컴퓨터의 secrets.bin에 OS 사용자 수준 암호화로 저장되며, 평문이 아닙니다.',
+  clearKey: 'Key 지우기',
+  aiNeedKey: '먼저 설정에 DeepSeek API Key를 넣으세요.',
+  aiUnauthorized: 'API Key가 잘못되었거나 만료되었습니다.',
+  aiForbidden: '이 모델에 대한 권한이 없습니다.',
+  aiRateLimit: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.',
+  aiServer: 'DeepSeek를 잠시 사용할 수 없습니다.',
+  aiHttp: 'AI 요청이 실패했습니다.',
+  aiAborted: '취소됨.',
+  aiTimeout: '응답 대기 시간이 초과되었습니다.',
+  aiNetwork: '네트워크 오류입니다. 연결을 확인하세요.',
+  aiUnknown: '분석에 실패했습니다.',
+  themePaper: '선지',
+  themePaperBlurb: '밝음 · 따뜻',
+  themeMacaron: '마카롱',
+  themeMacaronBlurb: '밝음 · 부드러움',
+  themePistachio: '피스타치오',
+  themePistachioBlurb: '밝음 · 청량',
+  themePeach: '복숭아',
+  themePeachBlurb: '밝음 · 달콤',
+  themeLemon: '레몬사탕',
+  themeLemonBlurb: '밝음 · 밝음',
+  themeBlueberry: '블루베리 밀크',
+  themeBlueberryBlurb: '밝음 · 차가움',
+  themeInk: '먹빛 밤',
+  themeInkBlurb: '어두움 · 따뜻',
+  themeCeladon: '청자',
+  themeCeladonBlurb: '어두움 · 차가움'
 }
 
 const TABLES: Record<Locale, Record<keyof typeof zh, string>> = { zh, en, ko }
@@ -549,6 +712,14 @@ const MOTTOS: Record<Locale, string[]> = {
 
 export function t(locale: Locale, key: Msg): string {
   return TABLES[locale][key] ?? zh[key]
+}
+
+export function i18nKeys(): Msg[] {
+  return Object.keys(zh) as Msg[]
+}
+
+export function localeTables(): Record<Locale, Record<Msg, string>> {
+  return TABLES
 }
 
 export function dailyMotto(locale: Locale, at = new Date()): string {

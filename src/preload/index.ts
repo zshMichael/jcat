@@ -6,9 +6,12 @@ import type {
   DebugChunk,
   DebugRequest,
   FileNode,
+  PublicSettings,
   Toolchain
 } from '../shared/types'
+import type { ExamSession } from '../shared/examSession'
 import type { TraceEvent } from '../shared/instrumentJava'
+import type { AppNoticeCode } from '../shared/types'
 
 const api = {
   platform: process.platform,
@@ -28,9 +31,11 @@ const api = {
     openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url)
   },
   settings: {
-    get: () => ipcRenderer.invoke('settings:get') as Promise<AppSettings>,
+    get: () => ipcRenderer.invoke('settings:get') as Promise<PublicSettings>,
     save: (partial: Partial<AppSettings>) =>
-      ipcRenderer.invoke('settings:save', partial) as Promise<AppSettings>
+      ipcRenderer.invoke('settings:save', partial) as Promise<PublicSettings>,
+    setKey: (key: string) => ipcRenderer.invoke('settings:setKey', key) as Promise<PublicSettings>,
+    clearKey: () => ipcRenderer.invoke('settings:clearKey') as Promise<PublicSettings>
   },
   toolchain: {
     detect: () => ipcRenderer.invoke('toolchain:detect') as Promise<Toolchain>
@@ -77,11 +82,9 @@ const api = {
   java: {
     mains: () => ipcRenderer.invoke('java:mains') as Promise<string[]>,
     compile: () => ipcRenderer.invoke('java:compile') as Promise<CompileResult>,
-    run: (mainClass?: string, replay?: string) =>
-      ipcRenderer.invoke('java:run', mainClass, replay),
+    run: (mainClass?: string, replay?: string) => ipcRenderer.invoke('java:run', mainClass, replay),
     stop: () => ipcRenderer.invoke('java:stop'),
-    writeStdin: (text: string) =>
-      ipcRenderer.invoke('java:writeStdin', text) as Promise<boolean>,
+    writeStdin: (text: string) => ipcRenderer.invoke('java:writeStdin', text) as Promise<boolean>,
     onData: (cb: (payload: { stream: 'stdout' | 'stderr'; text: string }) => void) => {
       const listener = (
         _e: unknown,
@@ -104,7 +107,19 @@ const api = {
       const listener = (_e: unknown, event: TraceEvent): void => cb(event)
       ipcRenderer.on('java:trace', listener)
       return () => ipcRenderer.removeListener('java:trace', listener)
+    },
+    onNotice: (cb: (code: AppNoticeCode) => void) => {
+      const listener = (_e: unknown, code: AppNoticeCode): void => cb(code)
+      ipcRenderer.on('java:notice', listener)
+      return () => ipcRenderer.removeListener('java:notice', listener)
     }
+  },
+  exam: {
+    getSession: () => ipcRenderer.invoke('exam:getSession') as Promise<ExamSession>,
+    saveSession: (session: ExamSession) =>
+      ipcRenderer.invoke('exam:saveSession', session) as Promise<ExamSession>,
+    clearSession: () => ipcRenderer.invoke('exam:clearSession') as Promise<ExamSession>,
+    scanAp: () => ipcRenderer.invoke('exam:scanAp') as Promise<Record<string, string[]>>
   },
   ai: {
     complete: (req: CompleteRequest) =>

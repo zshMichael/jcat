@@ -32,8 +32,20 @@ export type Toolchain = {
 
 export type Locale = 'zh' | 'en' | 'ko'
 
+export type AppNoticeCode =
+  | 'NO_PROJECT'
+  | 'MAVEN_NOT_FOUND'
+  | 'JDK_NOT_FOUND'
+  | 'NO_JAVA_FILES'
+  | 'NO_MAIN'
+  | 'JAVA_NOT_FOUND'
+  | 'MAVEN_OK'
+  | 'MAVEN_FAIL'
+  | 'JAVAC_OK'
+  | 'JAVAC_FAIL'
+  | 'EXAM_LOCKED'
+
 export type AppSettings = {
-  apiKey: string
   completionModel: string
   debugModel: string
   debugThinking: boolean
@@ -48,6 +60,12 @@ export type AppSettings = {
   locale: Locale
 }
 
+export type PublicSettings = AppSettings & {
+  hasApiKey: boolean
+  secretStorage: 'available' | 'unavailable' | 'legacy'
+  secretError?: string
+}
+
 export type CompileResult = {
   ok: boolean
   output: string
@@ -55,6 +73,8 @@ export type CompileResult = {
   mainClasses: string[]
   projectKind: ProjectKind
   classpath: string | null
+  notice?: AppNoticeCode
+  noticeParam?: string
 }
 
 export type RunEvent =

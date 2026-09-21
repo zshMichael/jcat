@@ -1,6 +1,6 @@
 import { toPng } from 'html-to-image'
 import type * as Monaco from 'monaco-editor'
-import { catMarkSrc } from '../theme/CatIcon'
+import { catMarkSrc } from '../theme/catMark'
 
 const CHUNK = 90
 

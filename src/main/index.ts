@@ -6,15 +6,15 @@ import { basename, dirname, join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { abortComplete, abortDebug, complete, debugStream } from './deepseek'
-import {
-  compileProject,
-  runMain,
-  scanMainClasses,
-  stopRun,
-  writeStdin
-} from './java'
+import { compileProject, runMain, scanMainClasses, stopRun, writeStdin } from './java'
 import { detectToolchain } from './jdk'
-import { loadSettings, saveSettings } from './settings'
+import { loadSettings, publicSettings, saveSettings } from './settings'
+import { clearSecretKey, setSecretKey } from './secretStore'
+import { clearExamSession, loadExamSession, saveExamSession } from './examStore'
+import { isExamLocked, setExamLocked } from './examGate'
+import { dialogCopy } from './nativeDialogs'
+import { snapshotFromFiles } from '../shared/examReport'
+import { idleSession, parseSession, type ExamSession } from '../shared/examSession'
 import {
   createEmpty,
   createFile,
@@ -24,6 +24,7 @@ import {
   deleteEntry,
   getRoot,
   pickFolder,
+  readJavaSources,
   readText,
   readTree,
   renameEntry,
@@ -31,7 +32,7 @@ import {
   transferEntry,
   writeText
 } from './workspace'
-import type { CompleteRequest, CompileResult, DebugRequest } from '../shared/types'
+import type { AppSettings, CompleteRequest, CompileResult, DebugRequest } from '../shared/types'
 import { THEME_CARDS } from '../shared/themes'
 
 let mainWindow: BrowserWindow | null = null
@@ -87,6 +88,24 @@ function createWindow(): void {
   }
 }
 
+function denyIfExam(): boolean {
+  return isExamLocked()
+}
+
+function persistExam(session: ExamSession): ExamSession {
+  const next = !!session.active
+  const was = isExamLocked()
+  setExamLocked(next)
+  if (next && !was) {
+    abortComplete()
+    abortDebug()
+    stopRun()
+  }
+  if (next) saveExamSession(session)
+  else clearExamSession()
+  return session
+}
+
 function registerIpc(): void {
   ipcMain.handle('window:minimize', () => mainWindow?.minimize())
   ipcMain.handle('window:maximize', () => {
@@ -114,17 +133,55 @@ function registerIpc(): void {
     }
   })
 
-  ipcMain.handle('settings:get', () => loadSettings())
-  ipcMain.handle('settings:save', (_e, partial) => saveSettings(partial))
+  ipcMain.handle('settings:get', () => publicSettings())
+  ipcMain.handle('settings:save', (_e, partial: Partial<AppSettings>) => {
+    const clean = { ...partial } as Partial<AppSettings> & { apiKey?: unknown }
+    delete clean.apiKey
+    if (isExamLocked()) {
+      delete clean.completionEnabled
+    }
+    saveSettings(clean)
+    return publicSettings()
+  })
+  ipcMain.handle('settings:setKey', (_e, key: unknown) => {
+    if (typeof key !== 'string') return publicSettings()
+    setSecretKey(key)
+    return publicSettings()
+  })
+  ipcMain.handle('settings:clearKey', () => {
+    clearSecretKey()
+    return publicSettings()
+  })
   ipcMain.handle('toolchain:detect', () => detectToolchain())
 
+  ipcMain.handle('exam:getSession', () => loadExamSession())
+  ipcMain.handle('exam:saveSession', (_e, raw: unknown) => {
+    const parsed = parseSession(raw)
+    if (!parsed) return idleSession()
+    return persistExam(parsed)
+  })
+  ipcMain.handle('exam:clearSession', () => persistExam(idleSession()))
+  ipcMain.handle('exam:scanAp', () => {
+    try {
+      return snapshotFromFiles(readJavaSources())
+    } catch {
+      return {}
+    }
+  })
+
   ipcMain.handle('workspace:open', async () => {
+    if (denyIfExam()) return null
     if (!mainWindow) return null
     const root = await pickFolder(mainWindow)
     if (root) saveSettings({ lastRoot: root })
     return root
   })
   ipcMain.handle('workspace:restore', (_e, root: string) => {
+    if (typeof root !== 'string') return null
+    if (denyIfExam()) {
+      const exam = loadExamSession()
+      if (exam.projectRoot && root !== exam.projectRoot) return null
+    }
     setRoot(root)
     return existsRoot(root) ? root : null
   })
@@ -139,13 +196,15 @@ function registerIpc(): void {
   )
   ipcMain.handle('workspace:createFolder', (_e, dir: string) => createFolder(dir))
   ipcMain.handle('workspace:newFileDialog', async () => {
+    if (denyIfExam() && loadExamSession().seg === 'mcq') return null
     if (!mainWindow) return null
+    const copy = dialogCopy(loadSettings().locale)
     const result = await dialog.showSaveDialog(mainWindow, {
-      title: '新建文件',
+      title: copy.newFile,
       defaultPath: join(getRoot() || homedir(), 'Main.java'),
       filters: [
         { name: 'Java', extensions: ['java'] },
-        { name: '所有文件', extensions: ['*'] }
+        { name: copy.allFiles, extensions: ['*'] }
       ]
     })
     if (result.canceled || !result.filePath) return null
@@ -163,9 +222,11 @@ function registerIpc(): void {
     return { root: getRoot(), file }
   })
   ipcMain.handle('workspace:newFolderDialog', async () => {
+    if (denyIfExam()) return null
     if (!mainWindow) return null
+    const copy = dialogCopy(loadSettings().locale)
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: '新建文件夹',
+      title: copy.newFolder,
       defaultPath: getRoot() || homedir(),
       properties: ['openDirectory', 'createDirectory', 'promptToCreate']
     })
@@ -179,23 +240,23 @@ function registerIpc(): void {
     return { root: getRoot(), dir }
   })
   ipcMain.handle('workspace:createEmpty', (_e, name: string) => {
+    if (denyIfExam()) return null
     const created = createEmpty(typeof name === 'string' ? name : 'untitled')
     saveSettings({ lastRoot: created.root })
     return created
   })
   ipcMain.handle('workspace:createPractice', (_e, kind: 'hello' | 'scanner') => {
+    if (denyIfExam()) return null
     const created = createPractice(kind)
     saveSettings({ lastRoot: created.root })
     return created
   })
-  ipcMain.handle(
-    'workspace:createFrq',
-    (_e, kind: 'methods' | 'class' | 'arraylist' | 'grid') => {
-      const created = createFrq(kind)
-      saveSettings({ lastRoot: created.root })
-      return created
-    }
-  )
+  ipcMain.handle('workspace:createFrq', (_e, kind: 'methods' | 'class' | 'arraylist' | 'grid') => {
+    if (denyIfExam()) return null
+    const created = createFrq(kind)
+    saveSettings({ lastRoot: created.root })
+    return created
+  })
   ipcMain.handle('workspace:rename', (_e, from: string, name: string) => renameEntry(from, name))
   ipcMain.handle('workspace:delete', (_e, target: string) => {
     deleteEntry(target)
@@ -207,19 +268,36 @@ function registerIpc(): void {
     const root = getRoot()
     return root ? scanMainClasses(root) : []
   })
-  ipcMain.handle('java:compile', () => compileProject())
+  ipcMain.handle('java:compile', () => {
+    if (denyIfExam() && loadExamSession().seg === 'mcq') {
+      return {
+        ok: false,
+        output: '',
+        diagnostics: [],
+        mainClasses: [],
+        projectKind: 'folder',
+        classpath: null,
+        notice: 'EXAM_LOCKED'
+      } satisfies CompileResult
+    }
+    return compileProject()
+  })
   ipcMain.handle('java:run', async (_e, mainClass?: string, replay?: string) => {
+    if (denyIfExam() && loadExamSession().seg === 'mcq') return
     await runMain(
       mainClass,
       (stream, text) => send('java:data', { stream, text }),
       (code) => send('java:exit', code),
       (compiled: CompileResult) => send('java:compiled', compiled),
       replay,
-      (event) => send('java:trace', event)
+      (event) => send('java:trace', event),
+      (code) => send('java:notice', code)
     )
   })
   ipcMain.handle('java:stop', () => stopRun())
-  ipcMain.handle('java:writeStdin', (_e, text: string) => writeStdin(typeof text === 'string' ? text : ''))
+  ipcMain.handle('java:writeStdin', (_e, text: string) =>
+    writeStdin(typeof text === 'string' ? text : '')
+  )
 
   ipcMain.handle('ai:complete', (_e, req: CompleteRequest) => complete(req))
   ipcMain.handle('ai:completeAbort', () => abortComplete())
@@ -229,9 +307,11 @@ function registerIpc(): void {
   ipcMain.handle('ai:debugAbort', () => abortDebug())
 
   ipcMain.handle('export:savePng', async (_e, dataUrl: string, defaultName: string) => {
+    if (denyIfExam()) return null
     if (!mainWindow) return null
+    const copy = dialogCopy(loadSettings().locale)
     const result = await dialog.showSaveDialog(mainWindow, {
-      title: '导出代码长图',
+      title: copy.longImage,
       defaultPath: defaultName.endsWith('.png') ? defaultName : `${defaultName}.png`,
       filters: [{ name: 'PNG', extensions: ['png'] }]
     })
@@ -255,6 +335,7 @@ app.whenReady().then(() => {
   app.setName('Jcat')
   if (process.platform !== 'darwin') Menu.setApplicationMenu(null)
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
+  setExamLocked(loadExamSession().active)
   registerIpc()
   createWindow()
   app.on('activate', () => {

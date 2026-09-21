@@ -1,6 +1,6 @@
 {
   "name": "jcat",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Jcat — a local Java IDE with DeepSeek completion and debug",
   "main": "./out/main/index.js",
   "author": "Michael",
@@ -10,6 +10,8 @@
     "lint": "eslint --cache .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "test": "tsx --test src/shared/*.test.ts src/main/*.test.ts",
+    "test:watch": "tsx --test --watch src/shared/*.test.ts",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
@@ -17,7 +19,7 @@
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win --x64 --arm64 --publish never",
-    "build:mac": "electron-vite build && electron-builder --mac dmg --publish never",
+    "build:mac": "electron-vite build && electron-builder --mac dmg --arm64 --publish never",
     "build:linux": "electron-vite build && electron-builder --linux",
     "sync:app": "sh scripts/sync-local-app.sh",
     "release": "npm run build && electron-builder --mac dmg --win --x64 --arm64 --publish never && npm run sync:app"
@@ -47,6 +49,7 @@
     "prettier": "^3.7.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^7.2.6"
   }

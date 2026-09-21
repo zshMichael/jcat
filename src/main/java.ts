@@ -13,7 +13,7 @@ import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join, relative, sep } from 'path'
 import { detectToolchain } from './jdk'
 import { getRoot } from './workspace'
-import type { CompileResult, Diagnostic, ProjectKind } from '../shared/types'
+import type { AppNoticeCode, CompileResult, Diagnostic, ProjectKind } from '../shared/types'
 import {
   instrumentJava,
   JCAT_SNAP_JAVA,
@@ -192,11 +192,12 @@ export async function compileProject(): Promise<CompileResult> {
   if (!root) {
     return {
       ok: false,
-      output: '还没有打开工程。',
+      output: '',
       diagnostics: [],
       mainClasses: [],
       projectKind: 'folder',
-      classpath: null
+      classpath: null,
+      notice: 'NO_PROJECT'
     }
   }
 
@@ -209,34 +210,35 @@ export async function compileProject(): Promise<CompileResult> {
     if (!tool.maven) {
       return {
         ok: false,
-        output: '没有找到 Maven。请在设置里填写 mvn 路径，或安装 Maven。',
+        output: '',
         diagnostics: [],
         mainClasses,
         projectKind: kind,
-        classpath: null
+        classpath: null,
+        notice: 'MAVEN_NOT_FOUND'
       }
     }
     const result = await runProcess(tool.maven, ['-q', 'compile'], root, tool.javaHome)
-    const output =
-      result.output || (result.code === 0 ? 'Maven compile 成功。' : 'Maven compile 失败。')
     return {
       ok: result.code === 0,
-      output,
-      diagnostics: parseJavac(output),
+      output: result.output,
+      diagnostics: parseJavac(result.output),
       mainClasses,
       projectKind: kind,
-      classpath: join(root, 'target', 'classes')
+      classpath: join(root, 'target', 'classes'),
+      notice: result.output.trim() ? undefined : result.code === 0 ? 'MAVEN_OK' : 'MAVEN_FAIL'
     }
   }
 
   if (!tool.javac) {
     return {
       ok: false,
-      output: '没有找到 JDK / javac。请安装 JDK，或在设置里填写 JAVA_HOME。',
+      output: '',
       diagnostics: [],
       mainClasses,
       projectKind: kind,
-      classpath: null
+      classpath: null,
+      notice: 'JDK_NOT_FOUND'
     }
   }
 
@@ -244,11 +246,12 @@ export async function compileProject(): Promise<CompileResult> {
   if (files.length === 0) {
     return {
       ok: false,
-      output: '这个文件夹里没有 .java 文件。',
+      output: '',
       diagnostics: [],
       mainClasses,
       projectKind: kind,
-      classpath: null
+      classpath: null,
+      notice: 'NO_JAVA_FILES'
     }
   }
 
@@ -263,15 +266,16 @@ export async function compileProject(): Promise<CompileResult> {
     root,
     tool.javaHome
   )
-  const output =
-    result.output || (result.code === 0 ? `javac 成功，${files.length} 个源文件。` : 'javac 失败。')
+  const output = result.output
   return {
     ok: result.code === 0,
     output,
     diagnostics: parseJavac(output),
     mainClasses,
     projectKind: kind,
-    classpath: outDir
+    classpath: outDir,
+    notice: output.trim() ? undefined : result.code === 0 ? 'JAVAC_OK' : 'JAVAC_FAIL',
+    noticeParam: result.code === 0 ? String(files.length) : undefined
   }
 }
 
@@ -409,12 +413,13 @@ export async function runMain(
   onExit: (code: number | null) => void,
   onCompiled?: (result: CompileResult) => void,
   replay?: string,
-  onTrace?: (event: TraceEvent) => void
+  onTrace?: (event: TraceEvent) => void,
+  onNotice?: (code: AppNoticeCode) => void
 ): Promise<void> {
   stopRun()
   const root = getRoot()
   if (!root) {
-    onData('stderr', '还没有打开工程。\n')
+    onNotice?.('NO_PROJECT')
     onExit(1)
     return
   }
@@ -422,7 +427,9 @@ export async function runMain(
   const compiled = await compileProject()
   onCompiled?.(compiled)
   if (!compiled.ok) {
-    onData('stderr', compiled.output + (compiled.output.endsWith('\n') ? '' : '\n'))
+    if (compiled.notice) onNotice?.(compiled.notice)
+    if (compiled.output)
+      onData('stderr', compiled.output + (compiled.output.endsWith('\n') ? '' : '\n'))
     onExit(1)
     return
   }
@@ -430,7 +437,7 @@ export async function runMain(
   const tool = await detectToolchain()
   const cls = mainClass || compiled.mainClasses[0]
   if (!cls) {
-    onData('stderr', '没有找到 public static void main。\n')
+    onNotice?.('NO_MAIN')
     onExit(1)
     return
   }
@@ -444,7 +451,7 @@ export async function runMain(
     )
   } else {
     if (!tool.java) {
-      onData('stderr', '没有找到 java 命令。\n')
+      onNotice?.('JAVA_NOT_FOUND')
       onExit(1)
       return
     }
