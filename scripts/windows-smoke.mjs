@@ -138,6 +138,29 @@ function killTree(pid) {
   spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, timeout: 30000 })
 }
 
+function killJcatHelpers() {
+  spawnSync('taskkill', ['/IM', 'Jcat.exe', '/T', '/F'], { windowsHide: true, timeout: 30000 })
+}
+
+function sleepMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+}
+
+function cleanupDir(dir) {
+  killJcatHelpers()
+  for (let i = 0; i < 6; i++) {
+    try {
+      rmSync(dir, { recursive: true, force: true })
+      return
+    } catch (err) {
+      console.log(`cleanup retry ${i + 1}: ${err.message}`)
+      killJcatHelpers()
+      sleepMs(1000)
+    }
+  }
+  console.log(`cleanup warning: left ${dir} in place after retries`)
+}
+
 function tryLaunch(exe) {
   if (!existsSync(exe)) {
     return Promise.resolve({ ok: false, reason: `missing ${exe}`, output: '' })
@@ -182,6 +205,8 @@ function tryLaunch(exe) {
     setTimeout(() => {
       if (pidAlive(pid)) {
         killTree(pid)
+        killJcatHelpers()
+        sleepMs(500)
         done({ ok: true, output })
       } else {
         done({ ok: false, reason: 'process exited before survival window', output })
@@ -265,12 +290,12 @@ async function main() {
   try {
     x64Launch = await installPeAndLaunch(x64Setup, x64Dir, 'x64')
   } finally {
-    rmSync(x64Dir, { recursive: true, force: true })
+    cleanupDir(x64Dir)
   }
   try {
     autoLaunch = await installPeAndLaunch(autoSetup, autoDir, 'multi-arch')
   } finally {
-    rmSync(autoDir, { recursive: true, force: true })
+    cleanupDir(autoDir)
   }
   if (!x64Launch.ok || !autoLaunch.ok) {
     console.log(
