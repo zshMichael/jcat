@@ -384,11 +384,21 @@ body.linux .titlebar .brand {
   letter-spacing: 0.04em;
 }
 
-.actions,
+.titlebar .brand,
+.titlebar .actions,
+.titlebar .title-end {
+  -webkit-app-region: drag;
+}
+
 .window-controls,
-.title-end,
 .titlebar select,
-.titlebar button {
+.titlebar button,
+.titlebar .anim-select,
+.titlebar .more-menu,
+.titlebar .lang-menu,
+.titlebar .sort-menu,
+.titlebar .exam-seg,
+.titlebar .exam-time-ctrl {
   -webkit-app-region: no-drag;
 }
 
