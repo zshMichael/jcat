@@ -6,7 +6,8 @@ import { createRequire } from 'node:module'
 import {
   assertMacDmg,
   assertMultiArchWindows,
-  expectedWindowsNames
+  expectedWindowsNames,
+  nsisListingHasArch
 } from '../src/shared/releaseArtifacts.ts'
 
 const version = createRequire(import.meta.url)('../package.json').version
@@ -36,7 +37,7 @@ function listing(name) {
 }
 
 function hasPayload(out, arch) {
-  return new RegExp(`${arch}\\.nsis\\.(7z|zip)`, 'i').test(out)
+  return nsisListingHasArch(out, arch)
 }
 
 function requireNsisPayloads(names) {
