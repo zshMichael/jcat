@@ -259,6 +259,33 @@ button.primary:hover:not(:disabled) {
   color: var(--paper);
 }
 
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: none;
+}
+
+button:focus-visible:not(:disabled):not(.win-cap):not(.loc):not(.side-tab) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+button.loc:focus-visible {
+  color: var(--ink);
+}
+
+input[type='range']:focus,
+input[type='range']:focus-visible,
+.monaco-editor,
+.monaco-editor.focused,
+.monaco-editor .overflow-guard,
+.monaco-editor textarea,
+.monaco-editor textarea:focus {
+  outline: none !important;
+}
+
 .app {
   position: relative;
   height: 100%;
@@ -911,9 +938,23 @@ input[type='checkbox']:checked::after {
   z-index: 6;
   pointer-events: auto;
   cursor: grab;
+  outline: none;
   box-shadow: var(--thumb-shadow);
   overflow: hidden;
   touch-action: none;
+}
+
+.pane.is-thumb:focus,
+.pane.is-thumb:focus-visible {
+  outline: none;
+  box-shadow: var(--thumb-shadow);
+}
+
+.pane.is-thumb .monaco-editor,
+.pane.is-thumb .monaco-editor.focused,
+.pane.is-thumb .overflow-guard {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .pane.is-thumb:hover {
@@ -1169,19 +1210,32 @@ input[type='checkbox']:checked::after {
   top: calc(var(--title-h) + 18%);
   right: 0;
   z-index: var(--z-float);
-  height: 58px;
-  padding: 0;
-  border-radius: 10px 0 0 10px;
+  width: 22px;
+  min-width: 22px;
+  height: 74px;
+  padding: 0 3px 0 5px;
+  border-radius: 12px 0 0 12px;
   border-right: 0;
   background: var(--paper-2);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--ink-soft);
+  outline: none;
+  box-shadow: none;
   transition:
     right 0.55s var(--ease),
     transform 0.28s var(--ease),
-    background 0.2s var(--ease);
+    background 0.2s var(--ease),
+    color 0.2s var(--ease);
+}
+
+.side-tab:focus,
+.side-tab:focus-visible {
+  outline: none;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--accent) 16%, var(--paper-2));
+  color: var(--ink);
 }
 
 .app:not(.side-collapsed) .side-tab {
@@ -1190,7 +1244,7 @@ input[type='checkbox']:checked::after {
 
 .side-tab span {
   display: block;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
   transform: translateX(1px);
 }
@@ -1412,6 +1466,15 @@ input[type='checkbox']:checked::after {
 
 .debug-prose {
   white-space: pre-wrap;
+}
+
+.debug-turn {
+  display: block;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  margin: 16px 2px 14px;
+  height: 0;
+  opacity: 0.85;
 }
 
 .debug-java {
@@ -1928,9 +1991,13 @@ input[type='checkbox']:checked::after {
 
 .export-card {
   width: 880px;
+  min-width: 880px;
+  max-width: none;
+  overflow: visible;
   background: #f6f1ea;
   color: #2c241b;
   padding: 28px 32px 36px;
+  box-sizing: border-box;
 }
 
 .export-head {
@@ -1998,11 +2065,16 @@ input[type='checkbox']:checked::after {
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.55;
+  width: max-content;
+  min-width: 100%;
+  overflow: visible;
 }
 
 .export-line {
   display: flex;
   gap: 16px;
+  width: max-content;
+  min-width: 100%;
 }
 
 .export-line .n {
@@ -2014,8 +2086,9 @@ input[type='checkbox']:checked::after {
 }
 
 .export-line .c {
-  flex: 1;
+  flex: 0 0 auto;
   white-space: pre;
+  overflow: visible;
 }
 
 .status-ok {

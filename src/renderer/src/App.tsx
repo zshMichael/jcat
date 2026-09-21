@@ -56,6 +56,7 @@ import { splitOutput } from './run/outputLinks'
 import { TraceView } from './run/TraceView'
 import { formatJava } from './editor/formatJava'
 import { parseJavaOutline, publicClassInfo, isJavaClassName } from './editor/javaOutline'
+import { startNextDebugTurn } from './debug/debugParts'
 import {
   paintApHints,
   registerApLanguage,
@@ -76,7 +77,7 @@ type PaneKind = 'main' | 'thumb' | 'dormant'
 
 const ZOOM_MIN = 0.6
 const ZOOM_MAX = 2.4
-const THUMB = { w: 248, h: 164, pad: 18, hover: 1.055 }
+const THUMB = { w: 248, h: 164, pad: 18, hover: 1.055, inputGap: 16 }
 const THUMB_LONG_MS = 320
 const THUMB_MOVE_CANCEL = 8
 const INPUT_MIN_H = 32
@@ -268,17 +269,19 @@ function thumbMetrics(
   lift: number,
   hover: boolean
 ): { scale: number; minTx: number; minTy: number; maxTx: number; maxTy: number } {
-  const scale = Math.min(THUMB.w / sw, THUMB.h / sh) * (hover ? THUMB.hover : 1)
-  const visualW = sw * scale
-  const visualH = sh * scale
+  const baseScale = Math.min(THUMB.w / sw, THUMB.h / sh)
+  const scale = baseScale * (hover ? THUMB.hover : 1)
+  const boundW = sw * baseScale * THUMB.hover
+  const boundH = sh * baseScale * THUMB.hover
   const minTx = THUMB.pad
   const minTy = THUMB.pad
+  const floor = Math.max(0, lift) + THUMB.inputGap
   return {
     scale,
     minTx,
     minTy,
-    maxTx: Math.max(minTx, sw - THUMB.pad - visualW),
-    maxTy: Math.max(minTy, sh - THUMB.pad - visualH - Math.max(0, lift))
+    maxTx: Math.max(minTx, sw - THUMB.pad - boundW),
+    maxTy: Math.max(minTy, sh - THUMB.pad - boundH - floor)
   }
 }
 
@@ -630,7 +633,12 @@ export default function App(): JSX.Element {
   }, [openFile, pendingJump])
 
   useEffect(() => {
-    if (running && stage === 'run') stdinRef.current?.focus()
+    if (stage === 'run') {
+      const node = editorRef.current?.getDomNode()
+      const active = document.activeElement
+      if (active instanceof HTMLElement && node?.contains(active)) active.blur()
+      if (running) stdinRef.current?.focus()
+    }
   }, [running, stage])
 
   useEffect(() => {
@@ -1171,6 +1179,8 @@ export default function App(): JSX.Element {
     setSideOpen(true)
     setDebugging(true)
     debugLineJumpedRef.current = false
+    setDebugReasoning('')
+    setDebugText((prev) => startNextDebugTurn(prev))
     const err = diagnostics.find((item) => item.severity === 'error')
     if (err && !debugSel) void jumpTo(err.file, err.line, err.column)
     try {
@@ -1343,7 +1353,7 @@ export default function App(): JSX.Element {
 
   const editorKind: PaneKind = stage === 'editor' ? 'main' : 'thumb'
   const runKind: PaneKind = stage === 'run' ? 'main' : running ? 'thumb' : 'dormant'
-  const editorLift = editorKind === 'thumb' ? inputLift : 0
+  const editorLift = editorKind === 'thumb' ? Math.max(inputLift, INPUT_MIN_H + 28) : 0
 
   const endThumbDrag = useCallback((): void => {
     window.clearTimeout(thumbTimerRef.current)
