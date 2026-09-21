@@ -24,7 +24,9 @@ export function dedentCode(code: string): string {
     while (prefix && !lead.startsWith(prefix)) prefix = prefix.slice(0, -1)
   }
   if (!prefix) return lines.join('\n')
-  return lines.map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line)).join('\n')
+  return lines
+    .map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line))
+    .join('\n')
 }
 
 function looksLikeJavaLine(line: string): boolean {

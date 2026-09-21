@@ -27,7 +27,9 @@ describe('dedentCode', () => {
   })
 
   it('dedents fenced java in a debug reply', () => {
-    const parts = splitDebugParts('```java\n        System.out.println(1);\n        input.close();\n```')
+    const parts = splitDebugParts(
+      '```java\n        System.out.println(1);\n        input.close();\n```'
+    )
     const java = parts.find((part) => part.kind === 'java')
     assert.equal(java?.kind, 'java')
     if (java?.kind === 'java') {
