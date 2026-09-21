@@ -1,6 +1,6 @@
-import type { AppSettings, Locale, ThemeId } from '@shared/types'
+import type { AppSettings, Locale, PublicSettings, ThemeId } from '@shared/types'
 import { THEME_CARDS } from '@shared/themes'
-import { useEffect, useState, type JSX } from 'react'
+import { useState, type JSX } from 'react'
 import type { Msg } from '../i18n'
 import { ModalShell } from './ModalShell'
 import { ApGuide } from './SidePanel'
@@ -11,25 +11,39 @@ const CREATOR_MAILTO = `mailto:${CREATOR_MAIL}`
 
 type Props = {
   open: boolean
-  settings: AppSettings
+  settings: PublicSettings
   onClose: () => void
   onSave: (next: Partial<AppSettings>) => Promise<void>
   onTheme: (id: ThemeId) => void
   t: (key: Msg) => string
 }
 
+const THEME_COPY: Record<ThemeId, { name: Msg; blurb: Msg }> = {
+  paper: { name: 'themePaper', blurb: 'themePaperBlurb' },
+  macaron: { name: 'themeMacaron', blurb: 'themeMacaronBlurb' },
+  pistachio: { name: 'themePistachio', blurb: 'themePistachioBlurb' },
+  peach: { name: 'themePeach', blurb: 'themePeachBlurb' },
+  lemon: { name: 'themeLemon', blurb: 'themeLemonBlurb' },
+  blueberry: { name: 'themeBlueberry', blurb: 'themeBlueberryBlurb' },
+  ink: { name: 'themeInk', blurb: 'themeInkBlurb' },
+  celadon: { name: 'themeCeladon', blurb: 'themeCeladonBlurb' }
+}
+
 export function SettingsModal({ open, settings, onClose, onSave, onTheme, t }: Props): JSX.Element {
   const [form, setForm] = useState(settings)
+  const [keyDraft, setKeyDraft] = useState('')
   const [apOpen, setApOpen] = useState(false)
   const locale: Locale = settings.locale
+  const [openSeen, setOpenSeen] = useState(open)
 
-  useEffect(() => {
-    if (!open) return
-    setForm(settings)
-    setApOpen(false)
-    // Reset the form when the modal opens, not on every settings save.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  if (open !== openSeen) {
+    setOpenSeen(open)
+    if (open) {
+      setForm(settings)
+      setKeyDraft('')
+      setApOpen(false)
+    }
+  }
 
   return (
     <>
@@ -50,7 +64,10 @@ export function SettingsModal({ open, settings, onClose, onSave, onTheme, t }: P
               type="button"
               className="primary"
               onClick={() => {
-                void onSave(form)
+                void (async () => {
+                  if (keyDraft.trim()) await window.jcat.settings.setKey(keyDraft.trim())
+                  await onSave(form)
+                })()
               }}
             >
               {t('save')}
@@ -70,8 +87,8 @@ export function SettingsModal({ open, settings, onClose, onSave, onTheme, t }: P
                   onTheme(card.id)
                 }}
               >
-                <span className="name">{card.name}</span>
-                <span className="blurb">{card.blurb}</span>
+                <span className="name">{t(THEME_COPY[card.id].name)}</span>
+                <span className="blurb">{t(THEME_COPY[card.id].blurb)}</span>
                 <span className="swatches">
                   {card.swatches.map((color) => (
                     <i key={color} style={{ background: color }} />
@@ -99,11 +116,34 @@ export function SettingsModal({ open, settings, onClose, onSave, onTheme, t }: P
           </div>
           <input
             type="password"
-            value={form.apiKey}
-            onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-            placeholder="sk-..."
+            value={keyDraft}
+            onChange={(e) => setKeyDraft(e.target.value)}
+            placeholder={settings.hasApiKey ? '••••••••' : 'sk-...'}
             autoComplete="off"
           />
+          <p className="settings-privacy">{t('apiPrivacy')}</p>
+          {settings.secretStorage === 'unavailable' ? (
+            <p className="settings-privacy">{t('secretUnavailable')}</p>
+          ) : settings.secretError === 'SECRET_CORRUPT' ? (
+            <p className="settings-privacy">{t('secretCorrupt')}</p>
+          ) : settings.secretStorage === 'legacy' && settings.hasApiKey ? (
+            <p className="settings-privacy">{t('secretLegacy')}</p>
+          ) : settings.hasApiKey ? (
+            <p className="settings-privacy">{t('secretOk')}</p>
+          ) : null}
+          {settings.hasApiKey ? (
+            <button
+              type="button"
+              onClick={() => {
+                void window.jcat.settings.clearKey().then((next) => {
+                  setForm(next)
+                })
+                setKeyDraft('')
+              }}
+            >
+              {t('clearKey')}
+            </button>
+          ) : null}
         </div>
         <div className="field">
           <label>{t('completionModel')}</label>

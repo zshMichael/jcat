@@ -16,6 +16,7 @@ type Props = {
   selectionHint: string | null
   onNote: (value: string) => void
   onAnalyze: () => void
+  onStop: () => void
 }
 
 function escapeHtml(value: string): string {
@@ -116,7 +117,8 @@ export function SidePanel({
   debugging,
   selectionHint,
   onNote,
-  onAnalyze
+  onAnalyze,
+  onStop
 }: Props): JSX.Element {
   return (
     <aside className="sidepanel">
@@ -141,9 +143,15 @@ export function SidePanel({
           rows={1}
           onChange={(e) => onNote(e.target.value)}
         />
-        <button className="primary" onClick={onAnalyze} disabled={debugging}>
-          {t('analyze')}
-        </button>
+        {debugging ? (
+          <button type="button" onClick={onStop}>
+            {t('debugStop')}
+          </button>
+        ) : (
+          <button className="primary" onClick={onAnalyze}>
+            {t('analyze')}
+          </button>
+        )}
       </div>
     </aside>
   )

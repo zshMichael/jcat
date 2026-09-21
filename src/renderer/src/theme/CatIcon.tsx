@@ -1,5 +1,5 @@
 import type { HTMLAttributes, JSX } from 'react'
-import mark from '../assets/jcat-mark.png'
+import { catMarkSrc } from './catMark'
 
 type Props = Omit<HTMLAttributes<HTMLSpanElement>, 'children'> & { size?: number }
 
@@ -11,8 +11,8 @@ export function CatIcon({ size = 26, className, style, ...props }: Props): JSX.E
       style={{
         width: size,
         height: size,
-        WebkitMaskImage: `url(${mark})`,
-        maskImage: `url(${mark})`,
+        WebkitMaskImage: `url(${catMarkSrc})`,
+        maskImage: `url(${catMarkSrc})`,
         ...style
       }}
       aria-hidden="true"
@@ -20,5 +20,3 @@ export function CatIcon({ size = 26, className, style, ...props }: Props): JSX.E
     />
   )
 }
-
-export { mark as catMarkSrc }
