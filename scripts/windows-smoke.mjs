@@ -139,20 +139,11 @@ function killTree(pid) {
 }
 
 function tryLaunch(exe) {
+  if (!existsSync(exe)) {
+    return Promise.resolve({ ok: false, reason: `missing ${exe}`, output: '' })
+  }
   const userData = mkdtempSync(join(tmpdir(), 'jcat-ud-'))
-  const child = spawn(exe, [`--user-data-dir=${userData}`], {
-    detached: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    windowsHide: true
-  })
   let output = ''
-  child.stdout?.on('data', (chunk) => {
-    output += chunk.toString()
-  })
-  child.stderr?.on('data', (chunk) => {
-    output += chunk.toString()
-  })
-  const pid = child.pid
   return new Promise((resolve) => {
     let settled = false
     const done = (result) => {
@@ -160,8 +151,29 @@ function tryLaunch(exe) {
       settled = true
       resolve(result)
     }
+    let child
+    try {
+      child = spawn(exe, [`--user-data-dir=${userData}`], {
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true
+      })
+    } catch (err) {
+      done({ ok: false, reason: err.message, output })
+      return
+    }
+    child.stdout?.on('data', (chunk) => {
+      output += chunk.toString()
+    })
+    child.stderr?.on('data', (chunk) => {
+      output += chunk.toString()
+    })
+    child.on('error', (err) => {
+      done({ ok: false, reason: err.message, output })
+    })
+    const pid = child.pid
     if (!pid) {
-      done({ ok: false, reason: 'no pid', output })
+      setTimeout(() => done({ ok: false, reason: 'no pid', output }), 2000)
       return
     }
     child.on('exit', (code) => {
@@ -227,39 +239,43 @@ async function main() {
 
   const x64Dir = join(tmpdir(), 'jcat-smoke-x64')
   const autoDir = join(tmpdir(), 'jcat-smoke-auto')
-  let x64Exe
-  let autoExe
-  try {
-    x64Exe = silentInstall(x64Setup, x64Dir)
-    assertMachine(x64Exe, IMAGE_FILE_MACHINE_AMD64)
-    autoExe = silentInstall(autoSetup, autoDir)
-    assertMachine(autoExe, IMAGE_FILE_MACHINE_AMD64)
-    console.log('multi-arch installer selected x64 payload on this x64 runner')
 
+  async function installPeAndLaunch(setup, dest, label) {
+    const exe = silentInstall(setup, dest)
+    assertMachine(exe, IMAGE_FILE_MACHINE_AMD64)
+    if (label === 'multi-arch') {
+      console.log('multi-arch installer selected x64 payload on this x64 runner')
+    }
     if (skipLaunch) {
-      console.log('LAUNCH_SKIPPED')
-      return
+      console.log(`LAUNCH_SKIPPED ${label}`)
+      return { ok: true, output: '' }
     }
-    const x64Launch = await tryLaunch(x64Exe)
-    if (x64Launch.ok) console.log('LAUNCH_OK x64 installer')
+    const launch = await tryLaunch(exe)
+    if (launch.ok) console.log(`LAUNCH_OK ${label} installer`)
     else {
-      console.log(`LAUNCH_UNVERIFIED x64: ${x64Launch.reason}`)
-      if (x64Launch.output) console.log(x64Launch.output.slice(0, 2000))
+      console.log(`LAUNCH_UNVERIFIED ${label}: ${launch.reason}`)
+      if (launch.output) console.log(launch.output.slice(0, 2000))
     }
-    const autoLaunch = await tryLaunch(autoExe)
-    if (autoLaunch.ok) console.log('LAUNCH_OK multi-arch installer')
-    else {
-      console.log(`LAUNCH_UNVERIFIED multi-arch: ${autoLaunch.reason}`)
-      if (autoLaunch.output) console.log(autoLaunch.output.slice(0, 2000))
-    }
-    if (!x64Launch.ok || !autoLaunch.ok) {
-      console.log(
-        'Windows launch survival was not confirmed on this hosted runner; install exit code and PE arch still passed. This is not a native ARM64 or SmartScreen result.'
-      )
-    }
+    return launch
+  }
+
+  // Same NSIS product uninstalls the previous copy, so do not keep both installs live.
+  let x64Launch
+  let autoLaunch
+  try {
+    x64Launch = await installPeAndLaunch(x64Setup, x64Dir, 'x64')
   } finally {
     rmSync(x64Dir, { recursive: true, force: true })
+  }
+  try {
+    autoLaunch = await installPeAndLaunch(autoSetup, autoDir, 'multi-arch')
+  } finally {
     rmSync(autoDir, { recursive: true, force: true })
+  }
+  if (!x64Launch.ok || !autoLaunch.ok) {
+    console.log(
+      'Windows launch survival was not confirmed on this hosted runner; install exit code and PE arch still passed. This is not a native ARM64 or SmartScreen result.'
+    )
   }
   console.log(`windows smoke checks finished for ${version}`)
 }
