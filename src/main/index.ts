@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
 import { existsSync, statSync } from 'fs'
 import { writeFile } from 'fs/promises'
 import { homedir } from 'os'
@@ -34,6 +34,7 @@ import {
 } from './workspace'
 import type { AppSettings, CompleteRequest, CompileResult, DebugRequest } from '../shared/types'
 import { THEME_CARDS } from '../shared/themes'
+import { initialWindowBounds, WINDOW_MIN_H, WINDOW_MIN_W } from '../shared/windowBounds'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -47,11 +48,12 @@ function send(channel: string, ...args: unknown[]): void {
 }
 
 function createWindow(): void {
+  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+  const bounds = initialWindowBounds(display.workArea)
   mainWindow = new BrowserWindow({
-    width: 1320,
-    height: 860,
-    minWidth: 960,
-    minHeight: 640,
+    ...bounds,
+    minWidth: WINDOW_MIN_W,
+    minHeight: WINDOW_MIN_H,
     show: false,
     frame: false,
     title: 'Jcat',
