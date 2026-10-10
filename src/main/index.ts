@@ -119,6 +119,18 @@ function registerIpc(): void {
   ipcMain.handle('window:setBackground', (_e, color: string) => {
     if (typeof color === 'string' && color.startsWith('#')) mainWindow?.setBackgroundColor(color)
   })
+  ipcMain.handle('window:getPosition', () => mainWindow?.getPosition() ?? [0, 0])
+  ipcMain.handle('window:setPosition', (_e, x: unknown, y: unknown) => {
+    if (!mainWindow || mainWindow.isMaximized()) return
+    if (
+      typeof x !== 'number' ||
+      typeof y !== 'number' ||
+      !Number.isFinite(x) ||
+      !Number.isFinite(y)
+    )
+      return
+    mainWindow.setPosition(Math.round(x), Math.round(y))
+  })
   ipcMain.handle('shell:openExternal', (_e, url: string) => {
     if (typeof url !== 'string') return
     try {

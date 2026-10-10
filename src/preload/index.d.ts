@@ -20,6 +20,8 @@ export type JcatAPI = {
     close: () => Promise<void>
     isMaximized: () => Promise<boolean>
     setBackground: (color: string) => Promise<void>
+    getPosition: () => Promise<[number, number]>
+    setPosition: (x: number, y: number) => Promise<void>
     onMaximized: (cb: (maximized: boolean) => void) => () => void
   }
   shell: {

@@ -402,6 +402,13 @@ body.linux .titlebar .brand {
   -webkit-app-region: no-drag;
 }
 
+body.win .titlebar,
+body.win .titlebar .brand,
+body.win .titlebar .actions,
+body.win .titlebar .title-end {
+  -webkit-app-region: no-drag;
+}
+
 .titlebar button {
   outline: none;
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
@@ -2069,6 +2076,8 @@ input[type='checkbox']:checked::after {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow: visible;
+  max-height: none;
 }
 
 .export-code {

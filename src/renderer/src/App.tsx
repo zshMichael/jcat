@@ -21,6 +21,7 @@ import type {
   ThemeId,
   Toolchain
 } from '@shared/types'
+import { exportRunText } from '@shared/exportRun'
 import { THEME_CARDS } from '@shared/themes'
 import { addedTokens } from '@shared/examReport'
 import {
@@ -231,18 +232,6 @@ function parseDebugLine(text: string): number | null {
   return n >= 1 ? n : null
 }
 
-function runExcerpt(output: string): string {
-  const lines = output.split('\n').filter((line) => {
-    const t = line.trim()
-    if (!t) return false
-    if (t.startsWith('进程结束') || t.startsWith('Process ended') || t.includes('프로세스 종료'))
-      return false
-    if (t.includes('Jcat 已就绪') || t.includes('Jcat is ready')) return false
-    return true
-  })
-  return lines.slice(-8).join('\n').slice(0, 360)
-}
-
 function resolveJumpFile(file: string, root: string | null, nodes: FileNode[]): string {
   const needle = file.replace(/\\/g, '/')
   const name = needle.split('/').pop() || needle
@@ -395,6 +384,7 @@ export default function App(): JSX.Element {
   const debugLineJumpedRef = useRef(false)
   const traceStepCountRef = useRef(0)
   const runInputRef = useRef<HTMLFormElement | null>(null)
+  const runLogRef = useRef<HTMLDivElement | null>(null)
   const thumbNormRef = useRef(thumbNorm)
   const thumbPressRef = useRef<{
     key: 'editor' | 'run'
@@ -631,6 +621,12 @@ export default function App(): JSX.Element {
     editor.focus()
     setPendingJump(null)
   }, [openFile, pendingJump])
+
+  useEffect(() => {
+    const el = runLogRef.current
+    if (!el || stage !== 'run') return
+    el.scrollTop = el.scrollHeight
+  }, [output, stage])
 
   useEffect(() => {
     if (stage === 'run') {
@@ -1230,7 +1226,7 @@ export default function App(): JSX.Element {
         className: cls,
         fileName: fileName || 'code.java',
         compileOk: lastCompileOk,
-        runExcerpt: runExcerpt(output),
+        runExcerpt: exportRunText(output),
         hideLines: !!settings?.homeworkHideLines,
         paper: card?.swatches[0] ?? '#F6F1EA',
         ink: card?.swatches[1] ?? '#2C241B',
@@ -1737,6 +1733,42 @@ export default function App(): JSX.Element {
     >
       <header
         className="titlebar"
+        onPointerDown={(e) => {
+          if (window.jcat.platform !== 'win32' || e.button !== 0) return
+          const target = e.target as HTMLElement
+          if (
+            target.closest(
+              'button, a, input, select, textarea, .anim-select, .more-menu, .lang-menu, .window-controls, .exam-seg, .exam-time-ctrl'
+            )
+          )
+            return
+          const sx0 = e.screenX
+          const sy0 = e.screenY
+          let origin: { x: number; y: number; sx: number; sy: number } | null = null
+          let pending = false
+          const move = (ev: PointerEvent): void => {
+            if (!origin) {
+              if (pending || Math.hypot(ev.screenX - sx0, ev.screenY - sy0) < 4) return
+              pending = true
+              const sx = ev.screenX
+              const sy = ev.screenY
+              void window.jcat.window.getPosition().then((pos) => {
+                origin = { x: pos[0], y: pos[1], sx, sy }
+              })
+              return
+            }
+            void window.jcat.window.setPosition(
+              origin.x + ev.screenX - origin.sx,
+              origin.y + ev.screenY - origin.sy
+            )
+          }
+          const up = (): void => {
+            window.removeEventListener('pointermove', move)
+            window.removeEventListener('pointerup', up)
+          }
+          window.addEventListener('pointermove', move)
+          window.addEventListener('pointerup', up)
+        }}
         onDoubleClick={(e) => {
           if (window.jcat.platform === 'darwin') return
           const target = e.target as HTMLElement
@@ -2264,7 +2296,7 @@ export default function App(): JSX.Element {
           {examMode ? null : (
             <TraceView events={traceEvents} step={traceStep} onStep={setTraceStep} t={tr} />
           )}
-          <div className="run-log">
+          <div className="run-log" ref={runLogRef}>
             {splitOutput(output).map((part, i) =>
               part.loc ? (
                 <button

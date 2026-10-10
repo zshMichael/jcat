@@ -4,6 +4,7 @@ import { cardWidthForCode, expandExportTabs, pngScaleToMaxWidth } from '@shared/
 import { catMarkSrc } from '../theme/catMark'
 
 const CHUNK = 90
+const RUN_CHUNK = 80
 const CODE_FONT =
   '13px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
 
@@ -105,6 +106,24 @@ export async function renderCodePng(
   const cardWidth = cardWidthForCode(measureLongestLinePx(lines), meta.hideLines)
   const compile =
     meta.compileOk === null ? '' : meta.compileOk ? meta.compileLabel : meta.compileLabel
+  const runParts = chunkLines(meta.runExcerpt, RUN_CHUNK)
+  const runBlock = (text: string, titled: boolean): string =>
+    `<div class="export-run" style="border-color:${meta.muted}">${
+      titled ? `<span>${escapeHtml(meta.runLabel)}</span>` : ''
+    }<pre>${escapeHtml(text)}</pre></div>`
+
+  const capture = async (card: HTMLDivElement): Promise<void> => {
+    host.innerHTML = ''
+    host.appendChild(card)
+    urls.push(
+      await toPng(card, {
+        width: cardWidth,
+        pixelRatio: 2,
+        backgroundColor: meta.paper,
+        cacheBust: true
+      })
+    )
+  }
 
   for (let i = 0; i < lines.length; i += CHUNK) {
     const slice = lines.slice(i, i + CHUNK).join('\n')
@@ -125,21 +144,19 @@ export async function renderCodePng(
             ${compile ? `<em class="export-chip" style="background:${meta.accent}22;color:${meta.ink}">${escapeHtml(compile)}</em>` : ''}
           </div>`
         : ''
-    const foot =
-      i + CHUNK >= lines.length && meta.runExcerpt
-        ? `<div class="export-run" style="border-color:${meta.muted}"><span>${escapeHtml(meta.runLabel)}</span><pre>${escapeHtml(meta.runExcerpt)}</pre></div>`
-        : ''
+    const foot = i + CHUNK >= lines.length && runParts[0] ? runBlock(runParts[0], true) : ''
     card.innerHTML = `${head}<div class="export-code" style="color:${meta.ink}">${numbered(colorized, i + 1, meta.hideLines)}</div>${foot}`
-    host.innerHTML = ''
-    host.appendChild(card)
-    urls.push(
-      await toPng(card, {
-        width: cardWidth,
-        pixelRatio: 2,
-        backgroundColor: meta.paper,
-        cacheBust: true
-      })
-    )
+    await capture(card)
+  }
+
+  for (let i = 1; i < runParts.length; i += 1) {
+    const card = document.createElement('div')
+    card.className = 'export-card'
+    card.style.width = `${cardWidth}px`
+    card.style.background = meta.paper
+    card.style.color = meta.ink
+    card.innerHTML = runBlock(runParts[i], false)
+    await capture(card)
   }
 
   host.innerHTML = ''
@@ -157,4 +174,12 @@ function escapeHtml(text: string): string {
     }
     return map[ch]
   })
+}
+
+function chunkLines(text: string, size: number): string[] {
+  if (!text) return []
+  const lines = text.split('\n')
+  const parts: string[] = []
+  for (let i = 0; i < lines.length; i += size) parts.push(lines.slice(i, i + size).join('\n'))
+  return parts
 }
