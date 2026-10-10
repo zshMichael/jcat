@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
-import { existsSync, statSync } from 'fs'
+import { existsSync, readFileSync, statSync } from 'fs'
 import { writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { basename, dirname, join } from 'path'
@@ -12,7 +12,7 @@ import { loadSettings, publicSettings, saveSettings } from './settings'
 import { clearSecretKey, setSecretKey } from './secretStore'
 import { clearExamSession, loadExamSession, saveExamSession } from './examStore'
 import { isExamLocked, setExamLocked } from './examGate'
-import { dialogCopy } from './nativeDialogs'
+import { applyNativeDialogLanguage, dialogCopy } from './nativeDialogs'
 import { snapshotFromFiles } from '../shared/examReport'
 import { idleSession, parseSession, type ExamSession } from '../shared/examSession'
 import {
@@ -32,9 +32,37 @@ import {
   transferEntry,
   writeText
 } from './workspace'
-import type { AppSettings, CompleteRequest, CompileResult, DebugRequest } from '../shared/types'
+import type {
+  AppSettings,
+  CompleteRequest,
+  CompileResult,
+  DebugRequest,
+  Locale
+} from '../shared/types'
 import { THEME_CARDS } from '../shared/themes'
 import { initialWindowBounds, WINDOW_MIN_H, WINDOW_MIN_W } from '../shared/windowBounds'
+
+function savedLocale(): Locale {
+  try {
+    const base =
+      process.platform === 'darwin'
+        ? join(homedir(), 'Library', 'Application Support', 'jcat')
+        : process.platform === 'win32'
+          ? join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'jcat')
+          : join(homedir(), '.config', 'jcat')
+    const raw = JSON.parse(readFileSync(join(base, 'settings.json'), 'utf8')) as { locale?: string }
+    if (raw.locale === 'en' || raw.locale === 'ko' || raw.locale === 'zh') return raw.locale
+  } catch {
+    /* first launch */
+  }
+  return 'zh'
+}
+
+try {
+  applyNativeDialogLanguage(savedLocale())
+} catch {
+  /* Native dialog language is applied again once the app is ready. */
+}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -154,7 +182,8 @@ function registerIpc(): void {
     if (isExamLocked()) {
       delete clean.completionEnabled
     }
-    saveSettings(clean)
+    const next = saveSettings(clean)
+    applyNativeDialogLanguage(next.locale)
     return publicSettings()
   })
   ipcMain.handle('settings:setKey', (_e, key: unknown) => {
@@ -213,8 +242,12 @@ function registerIpc(): void {
     if (denyIfExam() && loadExamSession().seg === 'mcq') return null
     if (!mainWindow) return null
     const copy = dialogCopy(loadSettings().locale)
+    applyNativeDialogLanguage(loadSettings().locale)
     const result = await dialog.showSaveDialog(mainWindow, {
       title: copy.newFile,
+      message: copy.choosePlace,
+      buttonLabel: copy.save,
+      nameFieldLabel: copy.fileName,
       defaultPath: join(getRoot() || homedir(), 'Main.java'),
       filters: [
         { name: 'Java', extensions: ['java'] },
@@ -324,8 +357,12 @@ function registerIpc(): void {
     if (denyIfExam()) return null
     if (!mainWindow) return null
     const copy = dialogCopy(loadSettings().locale)
+    applyNativeDialogLanguage(loadSettings().locale)
     const result = await dialog.showSaveDialog(mainWindow, {
       title: copy.longImage,
+      message: copy.choosePlace,
+      buttonLabel: copy.save,
+      nameFieldLabel: copy.fileName,
       defaultPath: defaultName.endsWith('.png') ? defaultName : `${defaultName}.png`,
       filters: [{ name: 'PNG', extensions: ['png'] }]
     })
@@ -345,6 +382,7 @@ function existsRoot(root: string): boolean {
 }
 
 app.whenReady().then(() => {
+  applyNativeDialogLanguage(loadSettings().locale)
   electronApp.setAppUserModelId('com.jcat.ide')
   app.setName('Jcat')
   if (process.platform !== 'darwin') Menu.setApplicationMenu(null)

@@ -15,6 +15,11 @@ files:
   - '!**/*.test.ts'
 asarUnpack:
   - resources/**
+extraResources:
+  - from: build/lproj
+    to: .
+    filter:
+      - '**/*'
 win:
   executableName: Jcat
   icon: build/icon.png
@@ -46,6 +51,11 @@ mac:
   extendInfo:
     - NSDocumentsFolderUsageDescription: Jcat needs access to your project folders.
     - NSDownloadsFolderUsageDescription: Jcat may save exported images to Downloads.
+    - CFBundleDevelopmentRegion: zh-Hans
+    - CFBundleLocalizations:
+        - zh-Hans
+        - en
+        - ko
   notarize: false
   target:
     - dmg

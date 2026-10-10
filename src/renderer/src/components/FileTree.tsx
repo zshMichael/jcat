@@ -1,5 +1,14 @@
 import type { FileNode } from '@shared/types'
-import { useEffect, useMemo, useRef, useState, type JSX, type MouseEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type JSX,
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent
+} from 'react'
+import { dropDirectory, filterJavaTree } from '@shared/treeOps'
 import type { Msg } from '../i18n'
 import { AnimSelect } from './AnimSelect'
 
@@ -20,6 +29,7 @@ type Props = {
   onCopy: (path: string) => void
   onCut: (path: string) => void
   onPaste: (target: string) => void
+  onMove: (from: string, destDir: string) => void
   onCollapse: () => void
   onResizeStart: (clientX: number) => void
   t: (key: Msg) => string
@@ -31,22 +41,13 @@ function extOf(node: FileNode): string {
   return i >= 0 ? node.name.slice(i + 1).toLowerCase() : ''
 }
 
-function isJava(node: FileNode): boolean {
-  return !node.isDir && node.name.toLowerCase().endsWith('.java')
-}
-
-function sortNodes(nodes: FileNode[], sort: TreeSort, javaFirst: boolean): FileNode[] {
+function sortNodes(nodes: FileNode[], sort: TreeSort): FileNode[] {
   const copy = nodes.map((node) => ({
     ...node,
-    children: node.children ? sortNodes(node.children, sort, javaFirst) : undefined
+    children: node.children ? sortNodes(node.children, sort) : undefined
   }))
   copy.sort((a, b) => {
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
-    if (javaFirst && !a.isDir && !b.isDir) {
-      const aj = isJava(a)
-      const bj = isJava(b)
-      if (aj !== bj) return aj ? -1 : 1
-    }
     if (sort === 'type') {
       const d = extOf(a).localeCompare(extOf(b), 'zh')
       if (d) return d
@@ -70,16 +71,43 @@ export function FileTree({
   onCopy,
   onCut,
   onPaste,
+  onMove,
   onCollapse,
   onResizeStart,
   t
 }: Props): JSX.Element {
   const [sort, setSort] = useState<TreeSort>('name')
-  const [javaFirst, setJavaFirst] = useState(false)
+  const [javaOnly, setJavaOnly] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [menu, setMenu] = useState<MenuState | null>(null)
-  const ordered = useMemo(() => sortNodes(nodes, sort, javaFirst), [javaFirst, nodes, sort])
+  const [drag, setDrag] = useState<{
+    path: string
+    name: string
+    x: number
+    y: number
+    dest: string | null
+  } | null>(null)
+  const pressRef = useRef<{
+    timer: number
+    x: number
+    y: number
+    path: string
+    name: string
+  } | null>(null)
+  const dragRef = useRef(false)
+  const dragLiveRef = useRef<{
+    path: string
+    name: string
+    x: number
+    y: number
+    dest: string | null
+  } | null>(null)
+  const skipClickRef = useRef(false)
+  const ordered = useMemo(() => {
+    const visible = javaOnly ? filterJavaTree(nodes) : nodes
+    return sortNodes(visible, sort)
+  }, [javaOnly, nodes, sort])
 
   useEffect(() => {
     if (!menu) return
@@ -101,6 +129,72 @@ export function FileTree({
       path,
       isDir
     })
+  }
+
+  const clearPress = (): void => {
+    if (pressRef.current) window.clearTimeout(pressRef.current.timer)
+    pressRef.current = null
+  }
+
+  const destAt = (x: number, y: number, from: string): string | null => {
+    const hit = document.elementFromPoint(x, y)
+    const row = hit?.closest('.tree-item') as HTMLElement | null
+    if (row?.dataset.path) return dropDirectory(from, row.dataset.path, row.dataset.isdir === '1')
+    if (hit?.closest('.filetree-body') && projectRoot) return dropDirectory(from, projectRoot, true)
+    return null
+  }
+
+  const onTreePointerDown = (e: ReactPointerEvent<HTMLDivElement>): void => {
+    if (e.button !== 0) return
+    const row = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
+    if (!row?.dataset.path || (e.target as HTMLElement).closest('input')) return
+    const path = row.dataset.path
+    const name = row.dataset.name || ''
+    const timer = window.setTimeout(() => {
+      const next = {
+        path,
+        name,
+        x: e.clientX,
+        y: e.clientY,
+        dest: destAt(e.clientX, e.clientY, path)
+      }
+      dragRef.current = true
+      dragLiveRef.current = next
+      skipClickRef.current = true
+      setDrag(next)
+    }, 420)
+    pressRef.current = { timer, x: e.clientX, y: e.clientY, path, name }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const onTreePointerMove = (e: ReactPointerEvent<HTMLDivElement>): void => {
+    const press = pressRef.current
+    if (press && !dragRef.current) {
+      if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) clearPress()
+      return
+    }
+    if (!dragRef.current) return
+    setDrag((cur) => {
+      if (!cur) return cur
+      const next = {
+        ...cur,
+        x: e.clientX,
+        y: e.clientY,
+        dest: destAt(e.clientX, e.clientY, cur.path)
+      }
+      dragLiveRef.current = next
+      return next
+    })
+  }
+
+  const onTreePointerUp = (): void => {
+    const current = dragRef.current ? dragLiveRef.current : null
+    if (current?.dest) onMove(current.path, current.dest)
+    if (dragRef.current) skipClickRef.current = true
+    dragRef.current = false
+    dragLiveRef.current = null
+    setDrag(null)
+    clearPress()
   }
 
   return (
@@ -130,16 +224,22 @@ export function FileTree({
         </button>
       </div>
       <label className="java-filter">
-        <input
-          type="checkbox"
-          checked={javaFirst}
-          onChange={(e) => setJavaFirst(e.target.checked)}
-        />
+        <input type="checkbox" checked={javaOnly} onChange={(e) => setJavaOnly(e.target.checked)} />
         {t('filterJava')}
       </label>
       {ordered.length === 0 ? <div className="tree-item muted">{t('emptyTree')}</div> : null}
       <div
-        className="filetree-body"
+        className={`filetree-body ${drag?.dest === projectRoot ? 'is-drop' : ''}`}
+        onPointerDown={onTreePointerDown}
+        onPointerMove={onTreePointerMove}
+        onPointerUp={onTreePointerUp}
+        onPointerCancel={onTreePointerUp}
+        onClickCapture={(e) => {
+          if (!skipClickRef.current) return
+          skipClickRef.current = false
+          e.preventDefault()
+          e.stopPropagation()
+        }}
         onContextMenu={(e) => {
           if (e.target !== e.currentTarget || !projectRoot) return
           openMenu(e, projectRoot, true)
@@ -152,7 +252,7 @@ export function FileTree({
             active={active}
             selected={selected}
             editing={editing}
-            javaFirst={javaFirst}
+            dropPath={drag?.dest ?? null}
             depth={0}
             onSelect={setSelected}
             onOpen={onOpen}
@@ -221,6 +321,11 @@ export function FileTree({
           </button>
         </div>
       ) : null}
+      {drag ? (
+        <div className="tree-item tree-drag-ghost" style={{ left: drag.x + 12, top: drag.y + 12 }}>
+          {drag.name}
+        </div>
+      ) : null}
       <div
         className="tree-resizer"
         onPointerDown={(e) => {
@@ -242,7 +347,7 @@ function TreeNode({
   active,
   selected,
   editing,
-  javaFirst,
+  dropPath,
   depth,
   onSelect,
   onOpen,
@@ -254,7 +359,7 @@ function TreeNode({
   active: string | null
   selected: string | null
   editing: string | null
-  javaFirst: boolean
+  dropPath: string | null
   depth: number
   onSelect: (path: string) => void
   onOpen: (path: string) => void
@@ -275,7 +380,7 @@ function TreeNode({
     }
   }, [isEditing])
 
-  const rowClass = `tree-item ${isOn ? 'active' : ''} ${javaFirst && isJava(node) ? 'java-pin' : ''}`
+  const rowClass = `tree-item ${isOn ? 'active' : ''} ${dropPath === node.path ? 'is-drop' : ''}`
 
   const body = isEditing ? (
     <input
@@ -299,6 +404,9 @@ function TreeNode({
       <div>
         <div
           className={rowClass}
+          data-path={node.path}
+          data-isdir="1"
+          data-name={node.name}
           onPointerDown={(e) => {
             if (e.detail === 1) wasSelected.current = selected === node.path
           }}
@@ -325,7 +433,7 @@ function TreeNode({
                 active={active}
                 selected={selected}
                 editing={editing}
-                javaFirst={javaFirst}
+                dropPath={dropPath}
                 depth={depth + 1}
                 onSelect={onSelect}
                 onOpen={onOpen}
@@ -343,6 +451,9 @@ function TreeNode({
   return (
     <div
       className={rowClass}
+      data-path={node.path}
+      data-isdir="0"
+      data-name={node.name}
       onPointerDown={(e) => {
         if (e.detail === 1) wasSelected.current = selected === node.path || active === node.path
       }}

@@ -1,4 +1,6 @@
 import type { Locale } from '../shared/types'
+import { appleLanguages } from '../shared/dialogLocale'
+import { systemPreferences } from 'electron'
 
 const DIALOGS = {
   zh: {
@@ -8,7 +10,10 @@ const DIALOGS = {
     newFile: '新建文件',
     allFiles: '所有文件',
     newFolder: '新建文件夹',
-    longImage: '导出代码长图'
+    longImage: '导出代码长图',
+    save: '存储',
+    choosePlace: '选择保存位置',
+    fileName: '文件名'
   },
   en: {
     openFolder: 'Open or create folder',
@@ -17,7 +22,10 @@ const DIALOGS = {
     newFile: 'New file',
     allFiles: 'All files',
     newFolder: 'New folder',
-    longImage: 'Export long image'
+    longImage: 'Export long image',
+    save: 'Save',
+    choosePlace: 'Choose where to save',
+    fileName: 'File name'
   },
   ko: {
     openFolder: '폴더 열기 또는 만들기',
@@ -26,10 +34,18 @@ const DIALOGS = {
     newFile: '새 파일',
     allFiles: '모든 파일',
     newFolder: '새 폴더',
-    longImage: '코드 긴 그림 내보내기'
+    longImage: '코드 긴 그림 내보내기',
+    save: '저장',
+    choosePlace: '저장 위치 선택',
+    fileName: '파일 이름'
   }
 } as const
 
 export function dialogCopy(locale: Locale): Record<keyof (typeof DIALOGS)['zh'], string> {
   return DIALOGS[locale] ?? DIALOGS.zh
+}
+
+export function applyNativeDialogLanguage(locale: Locale): void {
+  if (process.platform !== 'darwin') return
+  systemPreferences.setUserDefault('AppleLanguages', 'array', appleLanguages(locale))
 }

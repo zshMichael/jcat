@@ -1631,6 +1631,18 @@ export default function App(): JSX.Element {
     }
   }
 
+  const moveNode = async (from: string, destDir: string): Promise<void> => {
+    try {
+      const dest = await window.jcat.workspace.transfer(from, destDir, true)
+      retargetOpen(from, dest)
+      if (clipboard?.path === from) setClipboard(null)
+      await refreshTree()
+      setStatusMsg(tr('moved'))
+    } catch {
+      setStatusMsg(tr('badName'))
+    }
+  }
+
   const copyNode = (path: string): void => {
     setClipboard({ path, cut: false })
     setStatusMsg(tr('copied'))
@@ -2052,6 +2064,7 @@ export default function App(): JSX.Element {
         onCopy={copyNode}
         onCut={cutNode}
         onPaste={(target) => void pasteNode(target)}
+        onMove={(from, destDir) => void moveNode(from, destDir)}
         onCollapse={() => {
           treeOpenRef.current = false
           setTreeOpen(false)

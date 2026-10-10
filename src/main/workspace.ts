@@ -17,7 +17,7 @@ import { homedir } from 'os'
 import type { FileNode } from '../shared/types'
 import { isInsideDir } from '../shared/fsGuard'
 import { loadSettings } from './settings'
-import { dialogCopy } from './nativeDialogs'
+import { applyNativeDialogLanguage, dialogCopy } from './nativeDialogs'
 
 const SKIP = new Set([
   '.git',
@@ -44,6 +44,7 @@ export async function pickFolder(win: BrowserWindow): Promise<string | null> {
   const home = join(homedir(), 'Jcat')
   mkdirSync(home, { recursive: true })
   const copy = dialogCopy(loadSettings().locale)
+  applyNativeDialogLanguage(loadSettings().locale)
   const result = await dialog.showOpenDialog(win, {
     title: copy.openFolder,
     defaultPath: currentRoot || home,

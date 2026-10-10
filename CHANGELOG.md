@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3
+
+- macOS save dialogs follow the language chosen in Jcat.
+- The project tree has more space between rows.
+- Long-press a file or folder to drag it into or out of a folder.
+- The project checkbox now shows only Java files.
+
 ## 1.1.2
 
 - Code long-image export includes the full run log, not the last few lines.

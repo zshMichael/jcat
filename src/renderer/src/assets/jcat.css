@@ -869,10 +869,26 @@ input[type='checkbox']:checked::after {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 8px;
-  border-radius: 6px;
+  min-height: 30px;
+  margin: 3px 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.tree-item.is-drop,
+.filetree-body.is-drop {
+  outline: 1.5px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--paper));
+}
+
+.tree-drag-ghost {
+  position: fixed;
+  z-index: var(--z-float);
+  margin: 0;
+  pointer-events: none;
+  box-shadow: var(--thumb-shadow);
 }
 
 .tree-item .chev {
