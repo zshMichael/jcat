@@ -170,13 +170,15 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s failglob
+          NOTES="docs/RELEASE-NOTES-${GITHUB_REF_NAME#v}.md"
+          test -f "$NOTES"
           gh release create "$GITHUB_REF_NAME" \
             dist/jcat-*.dmg \
             dist/jcat-*-setup.exe \
             dist/SHA256SUMS.txt \
             --draft \
             --title "Jcat ${GITHUB_REF_NAME#v}" \
-            --notes-file docs/RELEASE-NOTES-1.1.1.md
+            --notes-file "$NOTES"
       - name: Publish Release after assets exist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

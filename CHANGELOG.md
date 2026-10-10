@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+
+- Code long-image export includes the full run log, not the last few lines.
+- The run pane scrolls to the newest output.
+- On Windows, dragging empty titlebar space moves the window.
+
 ## 1.1.1
 
 Stability, exam-mode reliability, AI privacy wording, API key storage, i18n, tests, and CI.

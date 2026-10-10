@@ -1,6 +1,6 @@
 {
   "name": "jcat",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Jcat — a local Java IDE with DeepSeek completion and debug",
   "main": "./out/main/index.js",
   "author": "Michael",
