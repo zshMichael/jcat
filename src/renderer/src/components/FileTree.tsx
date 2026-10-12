@@ -88,26 +88,17 @@ export function FileTree({
     y: number
     dest: string | null
   } | null>(null)
-  const pressRef = useRef<{
-    timer: number
-    x: number
-    y: number
-    path: string
-    name: string
-  } | null>(null)
-  const dragRef = useRef(false)
-  const dragLiveRef = useRef<{
-    path: string
-    name: string
-    x: number
-    y: number
-    dest: string | null
-  } | null>(null)
   const skipClickRef = useRef(false)
+  const ghostRef = useRef<HTMLDivElement | null>(null)
+  const stopDragRef = useRef<(() => void) | null>(null)
   const ordered = useMemo(() => {
     const visible = javaOnly ? filterJavaTree(nodes) : nodes
     return sortNodes(visible, sort)
   }, [javaOnly, nodes, sort])
+
+  useEffect(() => {
+    return () => stopDragRef.current?.()
+  }, [])
 
   useEffect(() => {
     if (!menu) return
@@ -131,14 +122,9 @@ export function FileTree({
     })
   }
 
-  const clearPress = (): void => {
-    if (pressRef.current) window.clearTimeout(pressRef.current.timer)
-    pressRef.current = null
-  }
-
   const destAt = (x: number, y: number, from: string): string | null => {
     const hit = document.elementFromPoint(x, y)
-    const row = hit?.closest('.tree-item') as HTMLElement | null
+    const row = hit?.closest('.tree-item[data-path]') as HTMLElement | null
     if (row?.dataset.path) return dropDirectory(from, row.dataset.path, row.dataset.isdir === '1')
     if (hit?.closest('.filetree-body') && projectRoot) return dropDirectory(from, projectRoot, true)
     return null
@@ -146,55 +132,54 @@ export function FileTree({
 
   const onTreePointerDown = (e: ReactPointerEvent<HTMLDivElement>): void => {
     if (e.button !== 0) return
-    const row = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
-    if (!row?.dataset.path || (e.target as HTMLElement).closest('input')) return
+    const row = (e.target as HTMLElement).closest('.tree-item[data-path]') as HTMLElement | null
+    if (!row?.dataset.path || (e.target as HTMLElement).closest('input, button')) return
     const path = row.dataset.path
     const name = row.dataset.name || ''
-    const timer = window.setTimeout(() => {
-      const next = {
-        path,
-        name,
-        x: e.clientX,
-        y: e.clientY,
-        dest: destAt(e.clientX, e.clientY, path)
-      }
-      dragRef.current = true
-      dragLiveRef.current = next
-      skipClickRef.current = true
-      setDrag(next)
-    }, 420)
-    pressRef.current = { timer, x: e.clientX, y: e.clientY, path, name }
-    e.currentTarget.setPointerCapture(e.pointerId)
-  }
+    let x = e.clientX
+    let y = e.clientY
+    let alive = true
+    let dragging = false
 
-  const onTreePointerMove = (e: ReactPointerEvent<HTMLDivElement>): void => {
-    const press = pressRef.current
-    if (press && !dragRef.current) {
-      if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) clearPress()
-      return
+    const end = (): void => {
+      if (!alive) return
+      alive = false
+      window.clearTimeout(timer)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      setDrag(null)
     }
-    if (!dragRef.current) return
-    setDrag((cur) => {
-      if (!cur) return cur
-      const next = {
-        ...cur,
-        x: e.clientX,
-        y: e.clientY,
-        dest: destAt(e.clientX, e.clientY, cur.path)
-      }
-      dragLiveRef.current = next
-      return next
-    })
-  }
+    stopDragRef.current = end
 
-  const onTreePointerUp = (): void => {
-    const current = dragRef.current ? dragLiveRef.current : null
-    if (current?.dest) onMove(current.path, current.dest)
-    if (dragRef.current) skipClickRef.current = true
-    dragRef.current = false
-    dragLiveRef.current = null
-    setDrag(null)
-    clearPress()
+    const move = (ev: PointerEvent): void => {
+      if (!alive) return
+      x = ev.clientX
+      y = ev.clientY
+      if (!dragging) return
+      if (ghostRef.current) {
+        ghostRef.current.style.left = `${x + 12}px`
+        ghostRef.current.style.top = `${y + 12}px`
+      }
+      const dest = destAt(x, y, path)
+      setDrag((cur) => (cur && cur.dest === dest ? cur : { path, name, x, y, dest }))
+    }
+
+    const up = (): void => {
+      const dest = dragging ? destAt(x, y, path) : null
+      if (dragging) skipClickRef.current = true
+      end()
+      if (dest) onMove(path, dest)
+    }
+
+    const timer = window.setTimeout(() => {
+      if (!alive) return
+      dragging = true
+      skipClickRef.current = true
+      setDrag({ path, name, x, y, dest: destAt(x, y, path) })
+    }, 280)
+
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
   }
 
   return (
@@ -231,9 +216,6 @@ export function FileTree({
       <div
         className={`filetree-body ${drag?.dest === projectRoot ? 'is-drop' : ''}`}
         onPointerDown={onTreePointerDown}
-        onPointerMove={onTreePointerMove}
-        onPointerUp={onTreePointerUp}
-        onPointerCancel={onTreePointerUp}
         onClickCapture={(e) => {
           if (!skipClickRef.current) return
           skipClickRef.current = false
@@ -322,7 +304,11 @@ export function FileTree({
         </div>
       ) : null}
       {drag ? (
-        <div className="tree-item tree-drag-ghost" style={{ left: drag.x + 12, top: drag.y + 12 }}>
+        <div
+          ref={ghostRef}
+          className="tree-item tree-drag-ghost"
+          style={{ left: drag.x + 12, top: drag.y + 12 }}
+        >
           {drag.name}
         </div>
       ) : null}
@@ -371,7 +357,7 @@ function TreeNode({
   const wasSelected = useRef(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const isEditing = editing === node.path
-  const isOn = selected === node.path || active === node.path
+  const isOn = !node.isDir && (selected === node.path || active === node.path)
 
   useEffect(() => {
     if (isEditing) {
@@ -412,7 +398,6 @@ function TreeNode({
           }}
           onClick={() => {
             if (isEditing) return
-            onSelect(node.path)
             setOpen((v) => !v)
           }}
           onDoubleClick={(e) => {

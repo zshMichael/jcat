@@ -1639,7 +1639,7 @@ export default function App(): JSX.Element {
       await refreshTree()
       setStatusMsg(tr('moved'))
     } catch {
-      setStatusMsg(tr('badName'))
+      setStatusMsg(tr('moveFail'))
     }
   }
 

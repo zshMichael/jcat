@@ -192,7 +192,8 @@ export function deleteEntry(target: string): void {
 
 export function transferEntry(from: string, destDir: string, cut: boolean): string {
   assertInsideRoot(from)
-  assertInsideRoot(destDir)
+  const root = currentRoot
+  if (!root || !isInsideDir(root, destDir)) throw new Error('outside project')
   if (!statSync(destDir).isDirectory()) destDir = dirname(destDir)
   const prefix = from.endsWith(sep) ? from : from + sep
   if (destDir === from || destDir.startsWith(prefix)) {

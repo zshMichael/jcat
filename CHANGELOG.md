@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.4
+
+- Clicking a project-tree row no longer grabs the pointer, so the window does not freeze on macOS or Windows.
+- Dragging a file out of a folder can land on the project root.
+- Expanding or collapsing a folder does not leave that row highlighted.
+
 ## 1.1.3
 
 - macOS save dialogs follow the language chosen in Jcat.
