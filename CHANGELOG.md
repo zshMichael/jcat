@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.5
+
+- Collapsing the project tree no longer clips the Jcat title on macOS.
+- The expand control sits in the tab row, inset like the project column, instead of covering open files.
+
 ## 1.1.4
 
 - Clicking a project-tree row no longer grabs the pointer, so the window does not freeze on macOS or Windows.

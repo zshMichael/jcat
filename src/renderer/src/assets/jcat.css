@@ -305,6 +305,10 @@ input[type='range']:focus-visible,
   --brand-w: 148px;
 }
 
+body.mac .app.tree-collapsed {
+  --brand-w: 200px;
+}
+
 .app.is-resizing,
 .app.is-resizing .titlebar {
   cursor: col-resize;
@@ -1021,6 +1025,11 @@ input[type='checkbox']:checked::after {
   z-index: 0;
 }
 
+.editor-empty .tree-mini {
+  align-self: flex-start;
+  margin: 12px 0 0 10px;
+}
+
 .editor-empty {
   flex: 1;
   display: flex;
@@ -1063,6 +1072,14 @@ input[type='checkbox']:checked::after {
   padding: 0 8px 0 4px;
   height: 36px;
   color: var(--ink-soft);
+}
+
+.app.tree-collapsed .tabs {
+  padding-left: 10px;
+}
+
+.tabs .tree-mini {
+  flex: none;
 }
 
 .tab-row {

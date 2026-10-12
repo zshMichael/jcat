@@ -24,6 +24,7 @@ type Props = {
   onFindOpen: () => void
   onFindClose: () => void
   onFormat: () => void
+  onExpandTree?: () => void
   t: (key: Msg) => string
 }
 
@@ -47,11 +48,17 @@ export function EditorBar({
   onFindOpen,
   onFindClose,
   onFormat,
+  onExpandTree,
   t
 }: Props): JSX.Element {
   return (
     <div className="editor-bar">
       <div className="tabs">
+        {onExpandTree ? (
+          <button type="button" className="tree-mini" onClick={onExpandTree}>
+            {t('expandTree')}
+          </button>
+        ) : null}
         <div className="tab-row">
           {tabs.map((tab) => (
             <div

@@ -2073,22 +2073,6 @@ export default function App(): JSX.Element {
         t={tr}
       />
 
-      {examMode || treeOpen ? null : (
-        <div className="tree-chip">
-          <span className="tree-chip-name">{fileName || tr('project')}</span>
-          <button
-            type="button"
-            className="tree-mini"
-            onClick={() => {
-              treeOpenRef.current = true
-              setTreeOpen(true)
-            }}
-          >
-            {tr('expandTree')}
-          </button>
-        </div>
-      )}
-
       <section className={`stage ${examMode && examSeg === 'mcq' ? 'is-mcq' : ''}`} ref={stageRef}>
         <div className="exam-veil" aria-hidden />
         <div className="exam-mcq-stage">
@@ -2172,6 +2156,14 @@ export default function App(): JSX.Element {
                   editorRef.current?.focus()
                 }}
                 onFormat={formatCurrent}
+                onExpandTree={
+                  examMode || treeOpen
+                    ? undefined
+                    : () => {
+                        treeOpenRef.current = true
+                        setTreeOpen(true)
+                      }
+                }
                 t={tr}
               />
               <div className="editor-wrap">
@@ -2239,6 +2231,18 @@ export default function App(): JSX.Element {
             </>
           ) : (
             <div className="editor-empty">
+              {examMode || treeOpen ? null : (
+                <button
+                  type="button"
+                  className="tree-mini"
+                  onClick={() => {
+                    treeOpenRef.current = true
+                    setTreeOpen(true)
+                  }}
+                >
+                  {tr('expandTree')}
+                </button>
+              )}
               <CatIcon size={48} />
               <p>{root ? tr('pickSource') : tr('waitingProject')}</p>
               <span>{dailyMotto(locale)}</span>
