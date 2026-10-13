@@ -22,7 +22,7 @@ describe('release version', () => {
   it('package.json, lockfile, changelog, notes, and README agree', () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
     const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }
-    assert.equal(pkg.version, '1.1.5')
+    assert.equal(pkg.version, '1.1.6')
     const check = spawnSync(process.execPath, [join(root, 'scripts/check-release-version.mjs')], {
       encoding: 'utf8'
     })

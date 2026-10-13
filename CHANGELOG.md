@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.6
+
+- The title-bar run-class menu sizes to the longest class name, so choosing a short name no longer clips the others.
+
 ## 1.1.5
 
 - Collapsing the project tree no longer clips the Jcat title on macOS.

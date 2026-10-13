@@ -63,6 +63,7 @@ export function AnimSelect({
                 key={item.id}
                 type="button"
                 className={value === item.id ? 'is-on' : ''}
+                title={item.label}
                 onClick={() => {
                   onChange(item.id)
                   setOpen(false)

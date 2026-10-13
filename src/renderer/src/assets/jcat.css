@@ -481,6 +481,19 @@ body.win .titlebar .title-end {
   pointer-events: none;
 }
 
+.anim-select .sort-menu-list,
+.anim-select .sort-menu-inner {
+  width: max-content;
+  min-width: 100%;
+  max-width: min(520px, calc(100vw - 24px));
+}
+
+.anim-select .sort-menu-inner button {
+  width: max-content;
+  min-width: 100%;
+  white-space: nowrap;
+}
+
 .lang-menu .tree-sort,
 .lang-menu > button {
   min-width: 72px;

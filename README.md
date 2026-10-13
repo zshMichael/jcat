@@ -24,22 +24,22 @@ DeepSeek 只在你主动开启幽灵补写或 AI Debug 时才会用到。那时�
 - 代码长图导出（可隐去行号）
 - 空页面每日一句格言
 
-### 安装 1.1.5
+### 安装 1.1.6
 
-到 [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.5) 下载：
+到 [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.6) 下载：
 
 | 系统                                | 文件                         |
 | ----------------------------------- | ---------------------------- |
-| macOS Apple Silicon                 | `jcat-1.1.5.dmg`             |
-| Windows x64                         | `jcat-1.1.5-x64-setup.exe`   |
-| Windows ARM64                       | `jcat-1.1.5-arm64-setup.exe` |
-| Windows 自动识别（含 x64 与 ARM64） | `jcat-1.1.5-setup.exe`       |
+| macOS Apple Silicon                 | `jcat-1.1.6.dmg`             |
+| Windows x64                         | `jcat-1.1.6-x64-setup.exe`   |
+| Windows ARM64                       | `jcat-1.1.6-arm64-setup.exe` |
+| Windows 自动识别（含 x64 与 ARM64） | `jcat-1.1.6-setup.exe`       |
 
 安装包附带 `SHA256SUMS.txt`。下载后可核对自己文件的 SHA-256。当前没有 Apple 公证，也没有 Windows 代码签名。**不要**为了打开 Jcat 去关闭系统安全功能。
 
 **macOS：** 包未公证。第一次打开：在访达中右键 Jcat → 打开。把 `/Applications/Jcat.app` 换掉即可覆盖升级，设置和 Key 还在。若系统提示无法验证开发者，用右键打开，而不是关掉 Gatekeeper。
 
-**Windows：** 安装包未签名，SmartScreen 可能提示。选择「仍要运行」即可。用同一 `appId`（`com.jcat.ide`）覆盖安装，不必先卸载。x64 与 ARM64 专用包只含对应架构。`jcat-1.1.5-setup.exe` 是 NSIS 双架构包，安装时按系统选择负载，不是 x64 的改名复制。
+**Windows：** 安装包未签名，SmartScreen 可能提示。选择「仍要运行」即可。用同一 `appId`（`com.jcat.ide`）覆盖安装，不必先卸载。x64 与 ARM64 专用包只含对应架构。`jcat-1.1.6-setup.exe` 是 NSIS 双架构包，安装时按系统选择负载，不是 x64 的改名复制。
 
 卸载应用**不会**删除你的工程文件夹。默认也不删除用户数据。覆盖升级会保留主题、语言、JDK / Maven 路径、最近工程和 API Key。
 
@@ -114,22 +114,22 @@ DeepSeek is used only when you turn on ghost write or AI Debug. Then the relevan
 - Long-image export (optional hidden line numbers)
 - A daily motto on the empty editor page
 
-### Install 1.1.5
+### Install 1.1.6
 
-Grab a build from [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.5):
+Grab a build from [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.6):
 
 | OS                         | File                         |
 | -------------------------- | ---------------------------- |
-| macOS Apple Silicon        | `jcat-1.1.5.dmg`             |
-| Windows x64                | `jcat-1.1.5-x64-setup.exe`   |
-| Windows ARM64              | `jcat-1.1.5-arm64-setup.exe` |
-| Windows auto (x64 + ARM64) | `jcat-1.1.5-setup.exe`       |
+| macOS Apple Silicon        | `jcat-1.1.6.dmg`             |
+| Windows x64                | `jcat-1.1.6-x64-setup.exe`   |
+| Windows ARM64              | `jcat-1.1.6-arm64-setup.exe` |
+| Windows auto (x64 + ARM64) | `jcat-1.1.6-setup.exe`       |
 
 Releases include `SHA256SUMS.txt`. Check the SHA-256 of the file you downloaded. Builds are **not** Apple-notarized and **not** Windows-signed. Do **not** turn off OS security features just to open Jcat.
 
 **macOS:** not notarized. First launch: right-click Jcat → Open. Replacing `/Applications/Jcat.app` upgrades in place; settings and the key stay. If Gatekeeper warns, use Open from the context menu instead of disabling Gatekeeper.
 
-**Windows:** unsigned, so SmartScreen may warn. Choose Run anyway. Setup overwrites the previous install (`appId` `com.jcat.ide` is stable). The x64 and ARM64 packages contain only that architecture. `jcat-1.1.5-setup.exe` is a multi-arch NSIS installer that picks the payload at install time; it is not a renamed x64 copy.
+**Windows:** unsigned, so SmartScreen may warn. Choose Run anyway. Setup overwrites the previous install (`appId` `com.jcat.ide` is stable). The x64 and ARM64 packages contain only that architecture. `jcat-1.1.6-setup.exe` is a multi-arch NSIS installer that picks the payload at install time; it is not a renamed x64 copy.
 
 Uninstall does **not** delete your project folders. App data is kept by default. An in-place upgrade keeps theme, language, JDK / Maven paths, recent projects, and the API key.
 
@@ -204,22 +204,22 @@ DeepSeek는 보강 입력 또는 AI Debug를 **직접 켠 뒤에만** 쓰입니�
 - 코드 긴 그림 내보내기(줄 번호 숨김 가능)
 - 빈 화면의 하루 한 문장
 
-### 1.1.5 설치
+### 1.1.6 설치
 
-[Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.5)에서 받습니다.
+[Releases](https://github.com/zshMichael/jcat/releases/tag/v1.1.6)에서 받습니다.
 
 | OS                             | 파일                         |
 | ------------------------------ | ---------------------------- |
-| macOS Apple Silicon            | `jcat-1.1.5.dmg`             |
-| Windows x64                    | `jcat-1.1.5-x64-setup.exe`   |
-| Windows ARM64                  | `jcat-1.1.5-arm64-setup.exe` |
-| Windows 자동 인식(x64 + ARM64) | `jcat-1.1.5-setup.exe`       |
+| macOS Apple Silicon            | `jcat-1.1.6.dmg`             |
+| Windows x64                    | `jcat-1.1.6-x64-setup.exe`   |
+| Windows ARM64                  | `jcat-1.1.6-arm64-setup.exe` |
+| Windows 자동 인식(x64 + ARM64) | `jcat-1.1.6-setup.exe`       |
 
 릴리스에 `SHA256SUMS.txt`가 있습니다. 받은 파일의 SHA-256을 확인하세요. 현재 macOS 공증과 Windows 코드 서명은 없습니다. Jcat을 열려고 **시스템 보안 기능을 끄지 마세요.**
 
 **macOS:** 공증되어 있지 않습니다. 처음 실행: Finder에서 Jcat을 우클릭 → 열기. `/Applications/Jcat.app`만 바꾸면 덮어쓰기 업그레이드되고 설정과 Key는 남습니다. Gatekeeper 경고가 나면 Gatekeeper를 끄지 말고 우클릭으로 여세요.
 
-**Windows:** 서명이 없어 SmartScreen이 경고할 수 있습니다. 그래도 실행을 고르세요. 같은 `appId`(`com.jcat.ide`)로 덮어씁니다. x64와 ARM64 전용 패키지는 해당 아키텍처만 담습니다. `jcat-1.1.5-setup.exe`는 설치 시 아키텍처를 고르는 NSIS 듀얼 패키지이며, x64 파일을 이름만 바꾼 것이 아닙니다.
+**Windows:** 서명이 없어 SmartScreen이 경고할 수 있습니다. 그래도 실행을 고르세요. 같은 `appId`(`com.jcat.ide`)로 덮어씁니다. x64와 ARM64 전용 패키지는 해당 아키텍처만 담습니다. `jcat-1.1.6-setup.exe`는 설치 시 아키텍처를 고르는 NSIS 듀얼 패키지이며, x64 파일을 이름만 바꾼 것이 아닙니다.
 
 앱을 제거해도 **사용자 프로젝트 폴더는 지우지 않습니다.** 사용자 데이터도 기본으로 남습니다. 덮어쓰기 업그레이드는 테마, 언어, JDK/Maven 경로, 최근 프로젝트, API Key를 유지합니다.
 
