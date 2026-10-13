@@ -200,7 +200,7 @@ export function FileTree({
           ]}
         />
       </div>
-      <div className="filetree-tools">
+      <div className="filetree-tools" onPointerDown={(e) => e.stopPropagation()}>
         <button type="button" title={t('newFile')} onClick={onNewFile}>
           {t('newFile')}
         </button>

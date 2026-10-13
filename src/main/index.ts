@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
-import { existsSync, readFileSync, statSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, statSync } from 'fs'
 import { writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { basename, dirname, join } from 'path'
@@ -239,52 +239,55 @@ function registerIpc(): void {
   )
   ipcMain.handle('workspace:createFolder', (_e, dir: string) => createFolder(dir))
   ipcMain.handle('workspace:newFileDialog', async () => {
-    if (denyIfExam() && loadExamSession().seg === 'mcq') return null
-    if (!mainWindow) return null
-    const copy = dialogCopy(loadSettings().locale)
-    applyNativeDialogLanguage(loadSettings().locale)
-    const result = await dialog.showSaveDialog(mainWindow, {
-      title: copy.newFile,
-      message: copy.choosePlace,
-      buttonLabel: copy.save,
-      nameFieldLabel: copy.fileName,
-      defaultPath: join(getRoot() || homedir(), 'Main.java'),
-      filters: [
-        { name: 'Java', extensions: ['java'] },
-        { name: copy.allFiles, extensions: ['*'] }
-      ]
-    })
-    if (result.canceled || !result.filePath) return null
-    const file = result.filePath
-    const cls = basename(file, '.java').replace(/[^\w]/g, '_') || 'Main'
-    const stub = file.toLowerCase().endsWith('.java')
-      ? `public class ${cls} {\n    public static void main(String[] args) {\n        \n    }\n}\n`
-      : ''
-    if (!existsSync(file)) writeText(file, stub)
-    if (!getRoot()) {
-      const root = dirname(file)
-      setRoot(root)
-      saveSettings({ lastRoot: root })
+    try {
+      if (denyIfExam() && loadExamSession().seg === 'mcq') return null
+      if (!mainWindow) return null
+      const copy = dialogCopy(loadSettings().locale)
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: copy.newFile,
+        defaultPath: join(getRoot() || homedir(), 'Main.java'),
+        filters: [{ name: 'Java', extensions: ['java'] }]
+      })
+      if (result.canceled || !result.filePath) return null
+      const requested = result.filePath
+      const cls = basename(requested, '.java').replace(/[^\w]/g, '_') || 'Main'
+      const stub = requested.toLowerCase().endsWith('.java')
+        ? `public class ${cls} {\n    public static void main(String[] args) {\n        \n    }\n}\n`
+        : ''
+      const file = createFile(requested, stub)
+      if (!getRoot()) {
+        const root = dirname(file)
+        setRoot(root)
+        saveSettings({ lastRoot: root })
+      }
+      return { root: getRoot(), file }
+    } catch (err) {
+      console.error(err)
+      return null
     }
-    return { root: getRoot(), file }
   })
   ipcMain.handle('workspace:newFolderDialog', async () => {
-    if (denyIfExam()) return null
-    if (!mainWindow) return null
-    const copy = dialogCopy(loadSettings().locale)
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: copy.newFolder,
-      defaultPath: getRoot() || homedir(),
-      properties: ['openDirectory', 'createDirectory', 'promptToCreate']
-    })
-    if (result.canceled || !result.filePaths[0]) return null
-    const dir = result.filePaths[0]
-    createFolder(dir)
-    if (!getRoot()) {
-      setRoot(dir)
-      saveSettings({ lastRoot: dir })
+    try {
+      if (denyIfExam()) return null
+      if (!mainWindow) return null
+      const copy = dialogCopy(loadSettings().locale)
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: copy.newFolder,
+        defaultPath: getRoot() || homedir(),
+        properties: ['openDirectory', 'createDirectory', 'promptToCreate']
+      })
+      if (result.canceled || !result.filePaths[0]) return null
+      const dir = result.filePaths[0]
+      mkdirSync(dir, { recursive: true })
+      if (!getRoot()) {
+        setRoot(dir)
+        saveSettings({ lastRoot: dir })
+      }
+      return { root: getRoot(), dir }
+    } catch (err) {
+      console.error(err)
+      return null
     }
-    return { root: getRoot(), dir }
   })
   ipcMain.handle('workspace:createEmpty', (_e, name: string) => {
     if (denyIfExam()) return null

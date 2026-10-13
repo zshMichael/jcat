@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.7
+
+- New file and new folder always create an entry. An existing name gets the next free name instead of doing nothing, and a failure is shown in the status bar.
+
 ## 1.1.6
 
 - The title-bar run-class menu sizes to the longest class name, so choosing a short name no longer clips the others.

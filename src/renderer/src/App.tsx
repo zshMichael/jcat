@@ -134,6 +134,12 @@ function joinPath(root: string, name: string): string {
   return `${root.replace(/[\\/]+$/, '')}${sep}${name.replace(/^[\\/]+/, '')}`
 }
 
+function parentDir(path: string | null, fallback: string): string {
+  if (!path) return fallback
+  const i = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return i > 0 ? path.slice(0, i) : fallback
+}
+
 function remapPaths(map: Record<string, string>, from: string, to: string): Record<string, string> {
   const next: Record<string, string> = {}
   for (const [path, text] of Object.entries(map)) {
@@ -963,12 +969,16 @@ export default function App(): JSX.Element {
 
   const newFile = useCallback(async (): Promise<void> => {
     if (!root) {
-      const created = await window.jcat.workspace.newFileDialog()
-      if (!created) return
-      if (created.root) setRoot(created.root)
-      await refreshTree()
-      await openPath(created.file)
-      setStatusMsg(tr('fileCreated'))
+      try {
+        const created = await window.jcat.workspace.newFileDialog()
+        if (!created) return
+        if (created.root) setRoot(created.root)
+        await refreshTree()
+        await openPath(created.file)
+        setStatusMsg(tr('fileCreated'))
+      } catch {
+        setStatusMsg(tr('createFail'))
+      }
       return
     }
     setNameAsk({ kind: 'file', value: 'Main.java' })
@@ -976,11 +986,15 @@ export default function App(): JSX.Element {
 
   const newFolder = useCallback(async (): Promise<void> => {
     if (!root) {
-      const created = await window.jcat.workspace.newFolderDialog()
-      if (!created) return
-      if (created.root) setRoot(created.root)
-      await refreshTree()
-      setStatusMsg(tr('folderCreated'))
+      try {
+        const created = await window.jcat.workspace.newFolderDialog()
+        if (!created) return
+        if (created.root) setRoot(created.root)
+        await refreshTree()
+        setStatusMsg(tr('folderCreated'))
+      } catch {
+        setStatusMsg(tr('createFail'))
+      }
       return
     }
     setNameAsk({ kind: 'folder', value: 'src' })
@@ -997,36 +1011,42 @@ export default function App(): JSX.Element {
       setStatusMsg(tr('badName'))
       return
     }
-    if (nameAsk.kind === 'project') {
-      const created = await window.jcat.workspace.createEmpty(raw)
-      if (!created) {
-        setStatusMsg(tr('examLocked'))
+    try {
+      if (nameAsk.kind === 'project') {
+        const created = await window.jcat.workspace.createEmpty(raw)
+        if (!created) {
+          setStatusMsg(tr('examLocked'))
+          return
+        }
+        setNameAsk(null)
+        await loadProject(created.root)
+        setStatusMsg(tr('folderCreated'))
         return
       }
-      setNameAsk(null)
-      await loadProject(created.root)
-      setStatusMsg(tr('folderCreated'))
-      return
-    }
-    if (!root) return
-    if (nameAsk.kind === 'file') {
-      const file = joinPath(root, raw.includes('.') ? raw : `${raw}.java`)
-      const stub = file.toLowerCase().endsWith('.java')
-        ? javaStub(file.split(/[/\\]/).pop() || 'Main.java')
-        : ''
-      await window.jcat.workspace.createFile(file, stub)
-      const written = await window.jcat.workspace.read(file)
+      if (!root) return
+      const place = parentDir(openFile, root)
+      if (nameAsk.kind === 'file') {
+        const leaf = raw.includes('.') ? raw : `${raw}.java`
+        const file = joinPath(place, leaf)
+        const stub = file.toLowerCase().endsWith('.java')
+          ? javaStub(file.split(/[/\\]/).pop() || 'Main.java')
+          : ''
+        const created = await window.jcat.workspace.createFile(file, stub)
+        const written = await window.jcat.workspace.read(created)
+        setNameAsk(null)
+        await refreshTree()
+        await openPath(created, written)
+        setStatusMsg(tr('fileCreated'))
+        return
+      }
+      await window.jcat.workspace.createFolder(joinPath(place, raw))
       setNameAsk(null)
       await refreshTree()
-      await openPath(file, written)
-      setStatusMsg(tr('fileCreated'))
-      return
+      setStatusMsg(tr('folderCreated'))
+    } catch {
+      setStatusMsg(tr('createFail'))
     }
-    await window.jcat.workspace.createFolder(joinPath(root, raw))
-    setNameAsk(null)
-    await refreshTree()
-    setStatusMsg(tr('folderCreated'))
-  }, [loadProject, nameAsk, openPath, refreshTree, root, tr])
+  }, [loadProject, nameAsk, openFile, openPath, refreshTree, root, tr])
 
   const compile = useCallback(async (): Promise<boolean> => {
     if (examRef.current.active && examRef.current.seg === 'mcq') {
@@ -2506,8 +2526,10 @@ export default function App(): JSX.Element {
           />
         </div>
         <div className="modal-actions">
-          <button onClick={() => setNameAsk(null)}>{tr('cancel')}</button>
-          <button className="primary" onClick={() => void confirmName()}>
+          <button type="button" onClick={() => setNameAsk(null)}>
+            {tr('cancel')}
+          </button>
+          <button type="button" className="primary" onClick={() => void confirmName()}>
             {tr('create')}
           </button>
         </div>

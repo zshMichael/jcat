@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type JSX, type ReactNode } from 'react'
 
 const OUT_MS = 280
 
@@ -13,10 +13,12 @@ export function ModalShell({ open, onClose, children, className }: Props): JSX.E
   const [present, setPresent] = useState(open)
   const [phase, setPhase] = useState<'in' | 'out'>(open ? 'in' : 'out')
   const [openSeen, setOpenSeen] = useState(open)
+  const openedAt = useRef(0)
 
   if (open !== openSeen) {
     setOpenSeen(open)
     if (open) {
+      openedAt.current = Date.now()
       setPresent(true)
       setPhase('in')
     } else if (present) {
@@ -32,7 +34,13 @@ export function ModalShell({ open, onClose, children, className }: Props): JSX.E
 
   if (!present) return null
   return (
-    <div className={`modal-backdrop is-${phase}`} onClick={onClose}>
+    <div
+      className={`modal-backdrop is-${phase}`}
+      onClick={() => {
+        if (Date.now() - openedAt.current < 400) return
+        onClose()
+      }}
+    >
       <div className={`modal ${className ?? ''} is-${phase}`} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>

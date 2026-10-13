@@ -136,13 +136,40 @@ export function writeText(file: string, content: string): void {
   writeFileSync(file, content, 'utf8')
 }
 
-export function createFile(file: string, content = ''): void {
-  mkdirSync(dirname(file), { recursive: true })
-  if (!existsSync(file)) writeFileSync(file, content, 'utf8')
+function sparePath(file: string): string {
+  if (!existsSync(file)) return file
+  const dir = dirname(file)
+  const ext = extname(file)
+  const stem = basename(file, ext)
+  let i = 2
+  let dest = join(dir, `${stem}${i}${ext}`)
+  while (existsSync(dest)) {
+    i += 1
+    dest = join(dir, `${stem}${i}${ext}`)
+  }
+  return dest
 }
 
-export function createFolder(dir: string): void {
-  mkdirSync(dir, { recursive: true })
+function withClassName(file: string, content: string): string {
+  if (!file.toLowerCase().endsWith('.java')) return content
+  const cls = basename(file, '.java').replace(/[^\w]/g, '_') || 'Main'
+  if (/\bpublic\s+class\s+\w+/.test(content)) {
+    return content.replace(/\bpublic\s+class\s+\w+/, `public class ${cls}`)
+  }
+  return content
+}
+
+export function createFile(file: string, content = ''): string {
+  const dest = sparePath(file)
+  mkdirSync(dirname(dest), { recursive: true })
+  writeFileSync(dest, withClassName(dest, content), 'utf8')
+  return dest
+}
+
+export function createFolder(dir: string): string {
+  const dest = existsSync(dir) ? uniqueDir(dir) : dir
+  mkdirSync(dest, { recursive: true })
+  return dest
 }
 
 export function fileName(file: string): string {

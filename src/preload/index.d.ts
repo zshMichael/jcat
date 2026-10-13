@@ -43,8 +43,8 @@ export type JcatAPI = {
     tree: () => Promise<FileNode[]>
     read: (file: string) => Promise<string>
     write: (file: string, content: string) => Promise<void>
-    createFile: (file: string, content?: string) => Promise<void>
-    createFolder: (dir: string) => Promise<void>
+    createFile: (file: string, content?: string) => Promise<string>
+    createFolder: (dir: string) => Promise<string>
     createEmpty: (name: string) => Promise<{ root: string } | null>
     createPractice: (kind: 'hello' | 'scanner') => Promise<{ root: string; file: string } | null>
     createFrq: (
