@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type JSX, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type JSX, type ReactNode } from 'react'
 
 const OUT_MS = 280
 
@@ -18,13 +18,16 @@ export function ModalShell({ open, onClose, children, className }: Props): JSX.E
   if (open !== openSeen) {
     setOpenSeen(open)
     if (open) {
-      openedAt.current = Date.now()
       setPresent(true)
       setPhase('in')
     } else if (present) {
       setPhase('out')
     }
   }
+
+  useLayoutEffect(() => {
+    if (open) openedAt.current = Date.now()
+  }, [open])
 
   useEffect(() => {
     if (open || phase !== 'out') return
