@@ -339,7 +339,7 @@ body.mac .app.exam-mode {
   padding: 0;
   border-bottom: 1px solid var(--line);
   background: var(--paper);
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
   transition:
     grid-template-columns 0.55s var(--ease),
     background-color 0.35s var(--ease),
@@ -388,20 +388,21 @@ body.linux .titlebar .brand {
   letter-spacing: 0.04em;
 }
 
-.titlebar .brand {
+.titlebar .brand,
+.title-drag {
   -webkit-app-region: drag;
 }
 
 .titlebar .actions,
 .titlebar .title-end {
   -webkit-app-region: no-drag;
+  background-color: var(--paper);
 }
 
-body.mac .titlebar .actions::after {
-  content: '';
+.title-drag {
   flex: 1;
   align-self: stretch;
-  -webkit-app-region: drag;
+  min-width: 12px;
 }
 
 .window-controls,
@@ -419,7 +420,9 @@ body.mac .titlebar .actions::after {
 body.win .titlebar,
 body.win .titlebar .brand,
 body.win .titlebar .actions,
-body.win .titlebar .title-end {
+body.win .titlebar .title-end,
+body.win .title-drag,
+body.linux .title-drag {
   -webkit-app-region: no-drag;
 }
 

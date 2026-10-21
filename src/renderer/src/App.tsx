@@ -1836,6 +1836,7 @@ export default function App(): JSX.Element {
                 options={runOptions.map((item) => ({ id: item, label: item }))}
                 onChange={setMainClass}
               />
+              <div className="title-drag" />
             </>
           )}
         </div>
