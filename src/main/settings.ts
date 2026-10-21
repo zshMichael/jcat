@@ -43,7 +43,10 @@ function sanitize(raw: Record<string, unknown>): AppSettings {
     homeworkHideLines: !!raw.homeworkHideLines,
     apHintsEnabled: raw.apHintsEnabled !== false,
     lastRoot: typeof raw.lastRoot === 'string' ? raw.lastRoot : '',
-    theme: isThemeId(String(raw.theme)) ? (raw.theme as AppSettings['theme']) : 'paper',
+    theme: (() => {
+      const rawTheme = raw.theme === 'pistachio' ? 'voyage' : String(raw.theme)
+      return isThemeId(rawTheme) ? rawTheme : 'paper'
+    })(),
     locale: locale === 'en' || locale === 'ko' || locale === 'zh' ? locale : 'zh'
   }
 }

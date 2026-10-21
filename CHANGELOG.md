@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.9
+
+- Replaced the pistachio theme with 夜航, a dark navy editor theme: lavender keywords, green strings, and blue names.
+
 ## 1.1.8
 
 - Title-bar buttons such as Settings, More, and the language menu receive clicks on macOS. The button row is no longer part of the window drag region, and a closing dialog no longer leaves an invisible layer over the window.

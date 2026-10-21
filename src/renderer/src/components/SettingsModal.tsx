@@ -21,7 +21,7 @@ type Props = {
 const THEME_COPY: Record<ThemeId, { name: Msg; blurb: Msg }> = {
   paper: { name: 'themePaper', blurb: 'themePaperBlurb' },
   macaron: { name: 'themeMacaron', blurb: 'themeMacaronBlurb' },
-  pistachio: { name: 'themePistachio', blurb: 'themePistachioBlurb' },
+  voyage: { name: 'themeVoyage', blurb: 'themeVoyageBlurb' },
   peach: { name: 'themePeach', blurb: 'themePeachBlurb' },
   lemon: { name: 'themeLemon', blurb: 'themeLemonBlurb' },
   blueberry: { name: 'themeBlueberry', blurb: 'themeBlueberryBlurb' },

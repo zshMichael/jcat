@@ -20,6 +20,7 @@ type EditorTheme = {
   number: string
   type: string
   delimiter: string
+  identifier?: string
 }
 
 const EDITOR: Record<ThemeId, EditorTheme> = {
@@ -103,25 +104,26 @@ const EDITOR: Record<ThemeId, EditorTheme> = {
     type: 'A3C9B8',
     delimiter: '8AA89C'
   },
-  pistachio: {
-    base: 'vs',
-    background: '#EEF6EF',
-    foreground: '#3C4A3E',
-    line: '#9BB5A0',
-    lineActive: '#5B735F',
-    selection: '#D3E6D6',
-    inactive: '#E4EFE5',
-    highlight: '#E4EFE588',
-    cursor: '#7EB38A',
-    indent: '#D7E6D9',
-    widget: '#E8F2E9',
-    ghost: '#8AA090',
-    comment: '7A8F7C',
-    keyword: '4F8A62',
-    string: '7A6A3A',
-    number: '6B5B95',
-    type: '3D6E80',
-    delimiter: '5B735F'
+  voyage: {
+    base: 'vs-dark',
+    background: '#161922',
+    foreground: '#C8CDD8',
+    line: '#4E566E',
+    lineActive: '#AEB6CC',
+    selection: '#2D3550',
+    inactive: '#222838',
+    highlight: '#22283888',
+    cursor: '#C4B5FD',
+    indent: '#2A3144',
+    widget: '#1C2030',
+    ghost: '#6B7288',
+    comment: '6B7089',
+    keyword: 'C4B5FD',
+    string: '98C379',
+    number: 'E5B06A',
+    type: 'E5B06A',
+    delimiter: 'AEB4C4',
+    identifier: '7EC8E3'
   },
   peach: {
     base: 'vs',
@@ -191,17 +193,19 @@ export function monacoThemeName(id: ThemeId): string {
 
 export function defineJcatThemes(monaco: typeof Monaco): void {
   for (const [id, t] of Object.entries(EDITOR) as Array<[ThemeId, EditorTheme]>) {
+    const rules: Monaco.editor.ITokenThemeRule[] = [
+      { token: 'comment', foreground: t.comment, fontStyle: 'italic' },
+      { token: 'keyword', foreground: t.keyword },
+      { token: 'string', foreground: t.string },
+      { token: 'number', foreground: t.number },
+      { token: 'type', foreground: t.type },
+      { token: 'delimiter', foreground: t.delimiter }
+    ]
+    if (t.identifier) rules.push({ token: 'identifier', foreground: t.identifier })
     monaco.editor.defineTheme(monacoThemeName(id), {
       base: t.base,
       inherit: true,
-      rules: [
-        { token: 'comment', foreground: t.comment, fontStyle: 'italic' },
-        { token: 'keyword', foreground: t.keyword },
-        { token: 'string', foreground: t.string },
-        { token: 'number', foreground: t.number },
-        { token: 'type', foreground: t.type },
-        { token: 'delimiter', foreground: t.delimiter }
-      ],
+      rules,
       colors: {
         'editor.background': t.background,
         'editor.foreground': t.foreground,

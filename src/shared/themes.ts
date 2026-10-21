@@ -1,7 +1,7 @@
 export const THEME_IDS = [
   'paper',
   'macaron',
-  'pistachio',
+  'voyage',
   'peach',
   'lemon',
   'blueberry',
@@ -35,11 +35,11 @@ export const THEME_CARDS: ThemeCard[] = [
     swatches: ['#F6F0F3', '#5A4C62', '#E7A7C3', '#A9D4C2']
   },
   {
-    id: 'pistachio',
-    name: '开心果',
-    blurb: '浅色 · 清',
-    windowBg: '#EEF6EF',
-    swatches: ['#EEF6EF', '#3C4A3E', '#7EB38A', '#F3D9A6']
+    id: 'voyage',
+    name: '夜航',
+    blurb: '深色 · 蓝',
+    windowBg: '#161922',
+    swatches: ['#161922', '#D7DBE6', '#C4B5FD', '#98C379']
   },
   {
     id: 'peach',
