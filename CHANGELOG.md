@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.8
+
+- Title-bar buttons such as Settings, More, and the language menu receive clicks on macOS. The button row is no longer part of the window drag region, and a closing dialog no longer leaves an invisible layer over the window.
+
 ## 1.1.7
 
 - New file and new folder always create an entry. An existing name gets the next free name instead of doing nothing, and a failure is shown in the status bar.

@@ -388,9 +388,19 @@ body.linux .titlebar .brand {
   letter-spacing: 0.04em;
 }
 
-.titlebar .brand,
+.titlebar .brand {
+  -webkit-app-region: drag;
+}
+
 .titlebar .actions,
 .titlebar .title-end {
+  -webkit-app-region: no-drag;
+}
+
+body.mac .titlebar .actions::after {
+  content: '';
+  flex: 1;
+  align-self: stretch;
   -webkit-app-region: drag;
 }
 
@@ -709,7 +719,7 @@ body.win .debug-body {
 .sort-menu.is-open .sort-menu-list,
 .lang-menu.is-open .lang-menu-list,
 .more-menu.is-open .more-menu-list {
-  grid-template-rows: 1fr;
+  grid-template-rows: auto;
   opacity: 1;
   pointer-events: auto;
 }
@@ -1878,11 +1888,12 @@ input[type='checkbox']:checked::after {
 }
 
 .modal-backdrop.is-in {
-  animation: fade-in 0.3s var(--ease) both;
+  animation: fade-in 0.3s var(--ease) forwards;
 }
 
 .modal-backdrop.is-out {
-  animation: fade-out 0.28s var(--ease) both;
+  pointer-events: none;
+  animation: fade-out 0.28s var(--ease) forwards;
 }
 
 .modal {

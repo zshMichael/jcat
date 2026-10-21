@@ -23,6 +23,8 @@ export function ModalShell({ open, onClose, children, className }: Props): JSX.E
     } else if (present) {
       setPhase('out')
     }
+  } else if (!open && present && phase === 'in') {
+    setPhase('out')
   }
 
   useLayoutEffect(() => {
