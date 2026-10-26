@@ -426,7 +426,11 @@ body.linux .title-drag {
   -webkit-app-region: no-drag;
 }
 
-.titlebar button {
+.titlebar button,
+.titlebar .anim-select-btn {
+  -webkit-app-region: no-drag;
+  /* macOS drops clicks on a transparent no-drag control. Keep this fill opaque. */
+  background-color: var(--paper);
   outline: none;
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
   transition:
@@ -434,6 +438,21 @@ body.linux .title-drag {
     border-color 0.32s var(--ease),
     box-shadow 0.32s var(--ease),
     color 0.22s var(--ease);
+}
+
+.titlebar button.primary {
+  background-color: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.titlebar button.primary:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  color: var(--paper);
+}
+
+.titlebar button:hover:not(:disabled):not(.primary) {
+  background-color: var(--paper-2);
 }
 
 .titlebar button:focus:not(:focus-visible) {

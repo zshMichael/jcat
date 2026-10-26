@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.11
+
+- Settings opens on macOS. Title-bar buttons now have an opaque fill, so the system no longer treats that click as a window drag.
+
 ## 1.1.10
 
 - macOS title-bar controls open again. Settings, More, language, Run, and Compile sit outside the window drag region, on an opaque background, so a real click reaches the button.

@@ -14,5 +14,6 @@ Rules:
 - `.titlebar` itself stays `no-drag`.
 - Drag only empty regions: `.brand` and `.title-drag`. Never put drag on `.actions`, `.title-end`, or any element that contains a button, menu, or select.
 - `.actions` and `.title-end` stay `no-drag` and use an opaque `background-color` (`var(--paper)`), not `transparent`.
+- Every title-bar button, including Settings, must itself use an opaque `background-color`. A transparent button punches a hole in the parent no-drag region, and macOS treats that hole as window dragging. DevTools `elementFromPoint` and synthesized clicks still hit the button and hide this.
 - A closing dialog must not leave `.modal-backdrop` on screen. While it is leaving (`is-out`), it has `pointer-events: none`.
-- After any title-bar or dialog change, verify a real click opens Settings. Do not treat a DevTools click as proof.
+- After any title-bar or dialog change, verify a real pointer click opens Settings. Do not treat a DevTools click as proof.
