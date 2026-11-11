@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.12
+
+- A Java file keeps its name when it holds more than one top-level type. The file is renamed on save only when it contains a single public type.
+
 ## 1.1.11
 
 - Settings opens on macOS. Title-bar buttons now have an opaque fill, so the system no longer treats that click as a window drag.

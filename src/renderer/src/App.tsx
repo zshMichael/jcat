@@ -56,7 +56,7 @@ import { WindowControls } from './components/WindowControls'
 import { splitOutput } from './run/outputLinks'
 import { TraceView } from './run/TraceView'
 import { formatJava } from './editor/formatJava'
-import { parseJavaOutline, publicClassInfo, isJavaClassName } from './editor/javaOutline'
+import { parseJavaOutline, publicClassInfo, classFileAction } from './editor/javaOutline'
 import { startNextDebugTurn } from './debug/debugParts'
 import {
   paintApHints,
@@ -733,9 +733,9 @@ export default function App(): JSX.Element {
         if (!quiet) setStatusMsg(tr('saved'))
         return path
       }
-      const info = publicClassInfo(content)
       const base = (path.split(/[/\\]/).pop() || path).replace(/\.java$/i, '')
-      if (!info || info.name === base) {
+      const action = classFileAction(content, base)
+      if (action.kind === 'keep') {
         setSaved((prev) => ({ ...prev, [path]: content }))
         setClassClash((cur) => (cur?.file === path ? null : cur))
         if (!quiet) setStatusMsg(tr('saved'))
@@ -743,30 +743,36 @@ export default function App(): JSX.Element {
       }
       const clashOf = (message: string): Diagnostic => ({
         file: path,
-        line: info.line,
-        column: info.column,
-        endColumn: info.endColumn,
+        line: action.line,
+        column: action.column,
+        endColumn: action.endColumn,
         severity: 'error',
         message
       })
-      if (!isJavaClassName(info.name)) {
+      if (action.kind === 'error') {
+        const message =
+          action.reason === 'bad'
+            ? tr('classNameBad')
+            : action.reason === 'many'
+              ? tr('classManyPublic').replace('{name}', action.name)
+              : tr('classNameMismatch').replace('{name}', action.name)
         setSaved((prev) => ({ ...prev, [path]: content }))
-        setClassClash(clashOf(tr('classNameBad')))
-        setStatusMsg(tr('classNameBad'))
+        setClassClash(clashOf(message))
+        setStatusMsg(message)
         return path
       }
       try {
-        const dest = await window.jcat.workspace.rename(path, `${info.name}.java`)
+        const dest = await window.jcat.workspace.rename(path, `${action.name}.java`)
         setBuffers((prev) => remapPaths(prev, path, dest))
         setSaved((prev) => ({ ...remapPaths(prev, path, dest), [dest]: content }))
         setOpenFile((current) => (current === path ? dest : current))
         setOpenTabs((prev) => remapTabPaths(prev, path, dest))
         setClassClash((cur) => (cur?.file === path || cur?.file === dest ? null : cur))
         await refreshTree()
-        setStatusMsg(tr('classRenamed').replace('{name}', `${info.name}.java`))
+        setStatusMsg(tr('classRenamed').replace('{name}', `${action.name}.java`))
         return dest
       } catch {
-        const taken = `${info.name}.java`
+        const taken = `${action.name}.java`
         const message = tr('classNameTaken').replace('{name}', taken)
         setSaved((prev) => ({ ...prev, [path]: content }))
         setClassClash(clashOf(message))

@@ -121,6 +121,8 @@ const zh = {
   classRenamed: '已按类名保存为 {name}',
   classNameTaken: '已经有 {name}，public class 必须和文件名一致',
   classNameBad: '类名必须是合法的 Java 标识符',
+  classManyPublic: '一个文件只能有一个 public 类型（{name}），文件名保持不变',
+  classNameMismatch: '这个文件有多个类型，public 类型 {name} 要和文件名一致，所以没有自动改名',
   examOutHint: '超纲',
   examMcq: '选择题',
   examFrq: '自由作答',
@@ -331,6 +333,9 @@ const en: Record<keyof typeof zh, string> = {
   classRenamed: 'Saved as {name} to match the class',
   classNameTaken: '{name} already exists. The public class name must match the file name.',
   classNameBad: 'Class name must be a valid Java identifier',
+  classManyPublic: 'A file can have only one public type ({name}). The file name stays put.',
+  classNameMismatch:
+    'This file has several types. Public type {name} must match the file name, so the file was not renamed.',
   examOutHint: 'off-exam',
   examMcq: 'MC',
   examFrq: 'FRQ',
@@ -544,6 +549,10 @@ const ko: Record<keyof typeof zh, string> = {
   classRenamed: '클래스 이름에 맞춰 {name}(으)로 저장했습니다',
   classNameTaken: '{name}이(가) 이미 있습니다. public class 이름은 파일 이름과 같아야 합니다.',
   classNameBad: '클래스 이름은 올바른 Java 식별자여야 합니다',
+  classManyPublic:
+    '파일에는 public 타입이 하나만 있을 수 있습니다({name}). 파일 이름은 그대로입니다.',
+  classNameMismatch:
+    '이 파일에는 타입이 여러 개 있습니다. public 타입 {name}은 파일 이름과 같아야 해서 이름을 바꾸지 않았습니다.',
   examOutHint: '범위 밖',
   examMcq: '객관식',
   examFrq: '서술형',
