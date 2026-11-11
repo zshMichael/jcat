@@ -13,6 +13,8 @@ import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join, relative, sep } from 'path'
 import { detectToolchain } from './jdk'
 import { getRoot } from './workspace'
+import { isInsideDir } from '../shared/fsGuard'
+import { projectLayout, projectOf } from '../shared/projectLayout'
 import type { AppNoticeCode, CompileResult, Diagnostic, ProjectKind } from '../shared/types'
 import {
   instrumentJava,
@@ -54,9 +56,52 @@ function walkJava(dir: string, acc: string[] = []): string[] {
   return acc
 }
 
-export function scanMainClasses(root: string): string[] {
+function directJava(dir: string): string[] {
+  let names: string[]
+  try {
+    names = readdirSync(dir)
+  } catch {
+    return []
+  }
+  return names.filter((name) => name.endsWith('.java')).map((name) => join(dir, name))
+}
+
+type Unit = { dir: string; name: string; srcRoot: string; files: string[] }
+
+function unitFor(workspace: string, sourceFile?: string): Unit {
+  const all = walkJava(workspace)
+  const rels = all.map((file) => relative(workspace, file).split(sep).join('/'))
+  const layout = projectLayout(rels, existsSync(join(workspace, 'pom.xml')))
+  let rel = ''
+  if (layout.mode === 'workspace') {
+    const focus =
+      sourceFile && isInsideDir(workspace, sourceFile)
+        ? relative(workspace, sourceFile).split(sep).join('/')
+        : ''
+    rel = projectOf(layout, focus)
+    const focusIsRootFile = !!focus && !focus.includes('/')
+    if (!rel && !focusIsRootFile) rel = layout.projects[0] || ''
+  }
+  const dir = rel ? join(workspace, rel) : workspace
+  const loose = layout.mode === 'workspace' && !rel
+  const srcRoot = loose ? workspace : sourceRootHint(dir)
+  return {
+    dir,
+    name: basename(dir),
+    srcRoot,
+    files: loose ? directJava(workspace) : walkJava(srcRoot)
+  }
+}
+
+export function mainClasses(sourceFile?: string): string[] {
+  const root = getRoot()
+  if (!root) return []
+  return mainsIn(unitFor(root, sourceFile).files)
+}
+
+function mainsIn(files: string[]): string[] {
   const found: string[] = []
-  for (const file of walkJava(root)) {
+  for (const file of files) {
     const text = readFileSync(file, 'utf8')
     if (!/public\s+static\s+void\s+main\s*\(/.test(text)) continue
     const pkg = text.match(/^\s*package\s+([\w.]+)\s*;/m)?.[1]
@@ -187,7 +232,7 @@ function sourceRootHint(root: string): string {
   return root
 }
 
-export async function compileProject(): Promise<CompileResult> {
+export async function compileProject(sourceFile?: string): Promise<CompileResult> {
   const root = getRoot()
   if (!root) {
     return {
@@ -201,10 +246,12 @@ export async function compileProject(): Promise<CompileResult> {
     }
   }
 
+  const unit = unitFor(root, sourceFile)
   const tool = await detectToolchain()
   const isMaven = existsSync(join(root, 'pom.xml'))
   const kind: ProjectKind = isMaven ? 'maven' : 'folder'
-  const mainClasses = scanMainClasses(root)
+  const mainClasses = mainsIn(unit.files)
+  const named = { projectName: unit.name }
 
   if (isMaven) {
     if (!tool.maven) {
@@ -215,7 +262,8 @@ export async function compileProject(): Promise<CompileResult> {
         mainClasses,
         projectKind: kind,
         classpath: null,
-        notice: 'MAVEN_NOT_FOUND'
+        notice: 'MAVEN_NOT_FOUND',
+        ...named
       }
     }
     const result = await runProcess(tool.maven, ['-q', 'compile'], root, tool.javaHome)
@@ -226,7 +274,8 @@ export async function compileProject(): Promise<CompileResult> {
       mainClasses,
       projectKind: kind,
       classpath: join(root, 'target', 'classes'),
-      notice: result.output.trim() ? undefined : result.code === 0 ? 'MAVEN_OK' : 'MAVEN_FAIL'
+      notice: result.output.trim() ? undefined : result.code === 0 ? 'MAVEN_OK' : 'MAVEN_FAIL',
+      ...named
     }
   }
 
@@ -238,11 +287,12 @@ export async function compileProject(): Promise<CompileResult> {
       mainClasses,
       projectKind: kind,
       classpath: null,
-      notice: 'JDK_NOT_FOUND'
+      notice: 'JDK_NOT_FOUND',
+      ...named
     }
   }
 
-  const files = walkJava(sourceRootHint(root))
+  const files = unit.files
   if (files.length === 0) {
     return {
       ok: false,
@@ -251,11 +301,12 @@ export async function compileProject(): Promise<CompileResult> {
       mainClasses,
       projectKind: kind,
       classpath: null,
-      notice: 'NO_JAVA_FILES'
+      notice: 'NO_JAVA_FILES',
+      ...named
     }
   }
 
-  const outDir = join(root, 'out')
+  const outDir = join(unit.dir, 'out')
   mkdirSync(outDir, { recursive: true })
   const listFile = join(tmpdir(), `jcat-sources-${process.pid}.txt`)
   writeFileSync(listFile, files.map((file) => file.replace(/\\/g, '/')).join('\n'), 'utf8')
@@ -263,7 +314,7 @@ export async function compileProject(): Promise<CompileResult> {
   const result = await runProcess(
     tool.javac,
     ['-encoding', 'UTF-8', '-d', outDir, `@${listFile}`],
-    root,
+    unit.dir,
     tool.javaHome
   )
   const output = result.output
@@ -275,7 +326,8 @@ export async function compileProject(): Promise<CompileResult> {
     projectKind: kind,
     classpath: outDir,
     notice: output.trim() ? undefined : result.code === 0 ? 'JAVAC_OK' : 'JAVAC_FAIL',
-    noticeParam: result.code === 0 ? String(files.length) : undefined
+    noticeParam: result.code === 0 ? String(files.length) : undefined,
+    ...named
   }
 }
 
@@ -292,13 +344,12 @@ function wipeTraceDir(): void {
 }
 
 async function compileInstrumented(
-  root: string,
+  srcRoot: string,
   javac: string,
-  javaHome: string | null
+  javaHome: string | null,
+  files: string[]
 ): Promise<string | null> {
   wipeTraceDir()
-  const srcRoot = sourceRootHint(root)
-  const files = walkJava(srcRoot)
   if (files.length === 0) return null
 
   traceDir = mkdtempSync(join(tmpdir(), 'jcat-trace-'))
@@ -414,7 +465,8 @@ export async function runMain(
   onCompiled?: (result: CompileResult) => void,
   replay?: string,
   onTrace?: (event: TraceEvent) => void,
-  onNotice?: (code: AppNoticeCode) => void
+  onNotice?: (code: AppNoticeCode) => void,
+  sourceFile?: string
 ): Promise<void> {
   stopRun()
   const root = getRoot()
@@ -424,7 +476,7 @@ export async function runMain(
     return
   }
 
-  const compiled = await compileProject()
+  const compiled = await compileProject(sourceFile)
   onCompiled?.(compiled)
   if (!compiled.ok) {
     if (compiled.notice) onNotice?.(compiled.notice)
@@ -457,7 +509,8 @@ export async function runMain(
     }
     let cp = compiled.classpath || join(root, 'out')
     if (compiled.projectKind === 'folder' && tool.javac) {
-      const traced = await compileInstrumented(root, tool.javac, tool.javaHome)
+      const unit = unitFor(root, sourceFile)
+      const traced = await compileInstrumented(unit.srcRoot, tool.javac, tool.javaHome, unit.files)
       if (traced) cp = traced
     }
     running = spawn(tool.java, ['-cp', cp, cls], spawnOpts(tool.java, root, env))

@@ -82,9 +82,12 @@ const api = {
       ipcRenderer.invoke('workspace:transfer', from, destDir, cut) as Promise<string>
   },
   java: {
-    mains: () => ipcRenderer.invoke('java:mains') as Promise<string[]>,
-    compile: () => ipcRenderer.invoke('java:compile') as Promise<CompileResult>,
-    run: (mainClass?: string, replay?: string) => ipcRenderer.invoke('java:run', mainClass, replay),
+    mains: (sourceFile?: string) =>
+      ipcRenderer.invoke('java:mains', sourceFile) as Promise<string[]>,
+    compile: (sourceFile?: string) =>
+      ipcRenderer.invoke('java:compile', sourceFile) as Promise<CompileResult>,
+    run: (mainClass?: string, replay?: string, sourceFile?: string) =>
+      ipcRenderer.invoke('java:run', mainClass, replay, sourceFile),
     stop: () => ipcRenderer.invoke('java:stop'),
     writeStdin: (text: string) => ipcRenderer.invoke('java:writeStdin', text) as Promise<boolean>,
     onData: (cb: (payload: { stream: 'stdout' | 'stderr'; text: string }) => void) => {

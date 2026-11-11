@@ -73,6 +73,7 @@ export type CompileResult = {
   mainClasses: string[]
   projectKind: ProjectKind
   classpath: string | null
+  projectName?: string
   notice?: AppNoticeCode
   noticeParam?: string
 }

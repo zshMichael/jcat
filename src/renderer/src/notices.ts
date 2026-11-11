@@ -18,14 +18,15 @@ const NOTICE: Record<AppNoticeCode, Msg> = {
 export function formatNotice(
   tr: (key: Msg) => string,
   code: AppNoticeCode,
-  param?: string
+  param?: string,
+  name?: string
 ): string {
   const text = tr(NOTICE[code])
-  return text.replace('{n}', param ?? '')
+  return text.replace('{n}', param ?? '').replace('{name}', name ?? '')
 }
 
 export function formatCompile(tr: (key: Msg) => string, result: CompileResult): string {
-  if (result.notice) return formatNotice(tr, result.notice, result.noticeParam)
+  if (result.notice) return formatNotice(tr, result.notice, result.noticeParam, result.projectName)
   return result.output
 }
 

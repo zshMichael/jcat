@@ -57,9 +57,9 @@ export type JcatAPI = {
     transfer: (from: string, destDir: string, cut: boolean) => Promise<string>
   }
   java: {
-    mains: () => Promise<string[]>
-    compile: () => Promise<CompileResult>
-    run: (mainClass?: string, replay?: string) => Promise<void>
+    mains: (sourceFile?: string) => Promise<string[]>
+    compile: (sourceFile?: string) => Promise<CompileResult>
+    run: (mainClass?: string, replay?: string, sourceFile?: string) => Promise<void>
     stop: () => Promise<void>
     writeStdin: (text: string) => Promise<boolean>
     onData: (cb: (payload: { stream: 'stdout' | 'stderr'; text: string }) => void) => () => void

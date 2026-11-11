@@ -32,6 +32,8 @@ type Props = {
   onMove: (from: string, destDir: string) => void
   onCollapse: () => void
   onResizeStart: (clientX: number) => void
+  heading?: string
+  headingTitle?: string
   t: (key: Msg) => string
 }
 
@@ -74,6 +76,8 @@ export function FileTree({
   onMove,
   onCollapse,
   onResizeStart,
+  heading,
+  headingTitle,
   t
 }: Props): JSX.Element {
   const [sort, setSort] = useState<TreeSort>('name')
@@ -185,7 +189,7 @@ export function FileTree({
   return (
     <aside className="filetree">
       <div className="filetree-head">
-        <h2>{t('project')}</h2>
+        <h2 title={headingTitle || t('project')}>{heading || t('project')}</h2>
         <button type="button" className="tree-mini" title={t('collapseTree')} onClick={onCollapse}>
           {t('collapseTree')}
         </button>

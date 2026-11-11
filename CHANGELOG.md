@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.13
+
+- An opened folder full of lab folders is a workspace. Each lab compiles and runs on its own, and the public classes inside that lab can use each other.
+
 ## 1.1.12
 
 - A Java file keeps its name when it holds more than one top-level type. The file is renamed on save only when it contains a single public type.

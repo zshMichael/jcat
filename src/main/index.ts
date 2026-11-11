@@ -6,7 +6,7 @@ import { basename, dirname, join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { abortComplete, abortDebug, complete, debugStream } from './deepseek'
-import { compileProject, runMain, scanMainClasses, stopRun, writeStdin } from './java'
+import { compileProject, mainClasses, runMain, stopRun, writeStdin } from './java'
 import { detectToolchain } from './jdk'
 import { loadSettings, publicSettings, saveSettings } from './settings'
 import { clearSecretKey, setSecretKey } from './secretStore'
@@ -314,11 +314,8 @@ function registerIpc(): void {
   ipcMain.handle('workspace:transfer', (_e, from: string, destDir: string, cut: boolean) =>
     transferEntry(from, destDir, cut)
   )
-  ipcMain.handle('java:mains', () => {
-    const root = getRoot()
-    return root ? scanMainClasses(root) : []
-  })
-  ipcMain.handle('java:compile', () => {
+  ipcMain.handle('java:mains', (_e, sourceFile?: string) => mainClasses(sourceFile))
+  ipcMain.handle('java:compile', (_e, sourceFile?: string) => {
     if (denyIfExam() && loadExamSession().seg === 'mcq') {
       return {
         ok: false,
@@ -330,20 +327,24 @@ function registerIpc(): void {
         notice: 'EXAM_LOCKED'
       } satisfies CompileResult
     }
-    return compileProject()
+    return compileProject(sourceFile)
   })
-  ipcMain.handle('java:run', async (_e, mainClass?: string, replay?: string) => {
-    if (denyIfExam() && loadExamSession().seg === 'mcq') return
-    await runMain(
-      mainClass,
-      (stream, text) => send('java:data', { stream, text }),
-      (code) => send('java:exit', code),
-      (compiled: CompileResult) => send('java:compiled', compiled),
-      replay,
-      (event) => send('java:trace', event),
-      (code) => send('java:notice', code)
-    )
-  })
+  ipcMain.handle(
+    'java:run',
+    async (_e, mainClass?: string, replay?: string, sourceFile?: string) => {
+      if (denyIfExam() && loadExamSession().seg === 'mcq') return
+      await runMain(
+        mainClass,
+        (stream, text) => send('java:data', { stream, text }),
+        (code) => send('java:exit', code),
+        (compiled: CompileResult) => send('java:compiled', compiled),
+        replay,
+        (event) => send('java:trace', event),
+        (code) => send('java:notice', code),
+        sourceFile
+      )
+    }
+  )
   ipcMain.handle('java:stop', () => stopRun())
   ipcMain.handle('java:writeStdin', (_e, text: string) =>
     writeStdin(typeof text === 'string' ? text : '')

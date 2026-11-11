@@ -22,6 +22,7 @@ import type {
   Toolchain
 } from '@shared/types'
 import { exportRunText } from '@shared/exportRun'
+import { projectLayout, projectOf } from '@shared/projectLayout'
 import { THEME_CARDS } from '@shared/themes'
 import { addedTokens } from '@shared/examReport'
 import {
@@ -430,6 +431,33 @@ export default function App(): JSX.Element {
 
   const currentCode = openFile ? (buffers[openFile] ?? '') : ''
   const fileName = openFile ? openFile.split(/[/\\]/).pop() || openFile : ''
+  const activeProject = useMemo(() => {
+    if (!root) return ''
+    const normRoot = root.replace(/\\/g, '/').replace(/\/$/, '')
+    const relOf = (file: string): string => {
+      const norm = file.replace(/\\/g, '/')
+      return norm.startsWith(`${normRoot}/`) ? norm.slice(normRoot.length + 1) : ''
+    }
+    const rels: string[] = []
+    const walk = (nodes: FileNode[]): void => {
+      for (const node of nodes) {
+        if (node.isDir) {
+          if (node.children) walk(node.children)
+          continue
+        }
+        if (!node.name.toLowerCase().endsWith('.java')) continue
+        const rel = relOf(node.path)
+        if (rel) rels.push(rel)
+      }
+    }
+    walk(tree)
+    const hasPom = tree.some((node) => !node.isDir && node.name === 'pom.xml')
+    const layout = projectLayout(rels, hasPom)
+    const rel = openFile ? relOf(openFile) : ''
+    const unit = projectOf(layout, rel)
+    if (unit) return unit
+    return root.split(/[/\\]/).filter(Boolean).pop() || ''
+  }, [openFile, root, tree])
   const outlineItems = useMemo(() => parseJavaOutline(currentCode), [currentCode])
   const outlineOptions = useMemo(
     () =>
@@ -449,12 +477,12 @@ export default function App(): JSX.Element {
   const refreshTree = useCallback(async () => {
     const nodes = await window.jcat.workspace.tree()
     setTree(nodes)
-    const list = await window.jcat.java.mains()
+    const list = await window.jcat.java.mains(openFile || undefined)
     setMains(list)
     setMainClass((current) =>
       current && list.includes(current) ? current : current || list[0] || ''
     )
-  }, [])
+  }, [openFile])
 
   const applyTheme = useCallback((id: ThemeId): void => {
     document.documentElement.setAttribute('data-theme', id)
@@ -569,9 +597,9 @@ export default function App(): JSX.Element {
           setRoot(restored)
           const nodes = await window.jcat.workspace.tree()
           setTree(nodes)
-          const list = await window.jcat.java.mains()
-          setMains(list)
           const first = firstJavaFile(nodes)
+          const list = await window.jcat.java.mains(first || undefined)
+          setMains(list)
           if (first) {
             const source = await window.jcat.workspace.read(first)
             setBuffers({ [first]: source })
@@ -808,9 +836,9 @@ export default function App(): JSX.Element {
       setOutput(`${tr('opened')} ${next}\n`)
       const nodes = await window.jcat.workspace.tree()
       setTree(nodes)
-      const list = await window.jcat.java.mains()
-      setMains(list)
       const first = preferredFile || firstJavaFile(nodes)
+      const list = await window.jcat.java.mains(first || undefined)
+      setMains(list)
       if (first) {
         const source = await window.jcat.workspace.read(first)
         setBuffers({ [first]: source })
@@ -882,9 +910,13 @@ export default function App(): JSX.Element {
       }))
       setOpenFile(path)
       setOpenTabs((prev) => (prev.includes(path) ? prev : [...prev, path]))
-      setMainClass((current) => pickMain(path, source || '', mains, current))
+      const list = await window.jcat.java.mains(path)
+      setMains(list)
+      setMainClass((current) =>
+        pickMain(path, source || '', list, list.includes(current) ? current : '')
+      )
     },
-    [buffers, mains]
+    [buffers]
   )
 
   const closeTab = useCallback(
@@ -1061,7 +1093,7 @@ export default function App(): JSX.Element {
     }
     await saveAllDirty()
     setStatusMsg(tr('compiling'))
-    const result = await window.jcat.java.compile()
+    const result = await window.jcat.java.compile(openFile || undefined)
     setDiagnostics(result.diagnostics)
     setMains(result.mainClasses)
     setMainClass((current) =>
@@ -1105,8 +1137,8 @@ export default function App(): JSX.Element {
     setRunning(true)
     setStage('run')
     setStatusMsg(tr('running'))
-    await window.jcat.java.run(mainClass || undefined, replay)
-  }, [lastStdin, mainClass, saveAllDirty, tr])
+    await window.jcat.java.run(mainClass || undefined, replay, openFile || undefined)
+  }, [lastStdin, mainClass, openFile, saveAllDirty, tr])
 
   const sendStdin = useCallback(async (): Promise<void> => {
     if (!running) return
@@ -2097,6 +2129,8 @@ export default function App(): JSX.Element {
           setTreeOpen(false)
         }}
         onResizeStart={startTreeResize}
+        heading={activeProject}
+        headingTitle={tr('projectTogether')}
         t={tr}
       />
 
