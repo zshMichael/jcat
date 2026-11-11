@@ -389,13 +389,14 @@ body.linux .titlebar .brand {
 }
 
 .titlebar .brand,
-.title-drag {
-  -webkit-app-region: drag;
+.title-drag,
+.titlebar .actions,
+.titlebar .title-end {
+  -webkit-app-region: no-drag;
 }
 
 .titlebar .actions,
 .titlebar .title-end {
-  -webkit-app-region: no-drag;
   background-color: var(--paper);
 }
 
@@ -728,13 +729,12 @@ body.win .debug-body {
   right: 0;
   z-index: var(--z-chrome);
   min-width: 92px;
-  display: grid;
-  grid-template-rows: 0fr;
   opacity: 0;
   pointer-events: none;
+  clip-path: inset(0 0 100% 0 round 8px);
   filter: drop-shadow(0 8px 16px rgba(44, 36, 27, 0.12));
   transition:
-    grid-template-rows 0.28s var(--ease),
+    clip-path 0.28s var(--ease),
     opacity 0.22s var(--ease);
 }
 
@@ -745,9 +745,9 @@ body.win .debug-body {
 .sort-menu.is-open .sort-menu-list,
 .lang-menu.is-open .lang-menu-list,
 .more-menu.is-open .more-menu-list {
-  grid-template-rows: auto;
   opacity: 1;
   pointer-events: auto;
+  clip-path: inset(0 0 0 0 round 8px);
 }
 
 .sort-menu.is-open .sort-caret {

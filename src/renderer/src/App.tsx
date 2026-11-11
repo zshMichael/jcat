@@ -1804,8 +1804,9 @@ export default function App(): JSX.Element {
       <header
         className="titlebar"
         onPointerDown={(e) => {
-          if (window.jcat.platform !== 'win32' || e.button !== 0) return
-          const target = e.target as HTMLElement
+          if (e.button !== 0) return
+          const target = e.target
+          if (!(target instanceof Element)) return
           if (
             target.closest(
               'button, a, input, select, textarea, .anim-select, .more-menu, .lang-menu, .window-controls, .exam-seg, .exam-time-ctrl'
@@ -1840,11 +1841,11 @@ export default function App(): JSX.Element {
           window.addEventListener('pointerup', up)
         }}
         onDoubleClick={(e) => {
-          if (window.jcat.platform === 'darwin') return
-          const target = e.target as HTMLElement
+          const target = e.target
+          if (!(target instanceof Element)) return
           if (
             target.closest(
-              'button, a, input, select, .anim-select, .more-menu, .lang-menu, .window-controls'
+              'button, a, input, select, textarea, .anim-select, .more-menu, .lang-menu, .window-controls, .exam-seg, .exam-time-ctrl'
             )
           )
             return

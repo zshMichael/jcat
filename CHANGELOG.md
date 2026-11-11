@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.14
+
+- Dropdowns open with an animation again. The title bar no longer uses a macOS drag region, so Settings stays clickable.
+
 ## 1.1.13
 
 - An opened folder full of lab folders is a workspace. Each lab compiles and runs on its own, and the public classes inside that lab can use each other.
