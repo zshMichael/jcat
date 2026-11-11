@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.16
+
+- Settings opens. The dialog was marked open while its layer was already gone, so later clicks did nothing.
+
 ## 1.1.15
 
 - Settings opens on macOS. The window no longer uses the hiddenInset title bar, which was swallowing clicks where the title would have been.

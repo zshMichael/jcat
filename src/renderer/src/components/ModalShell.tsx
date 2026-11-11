@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type JSX, type ReactNode } from 'react'
+import { nextModalPhase, type ModalPhase } from '@shared/modalPhase'
 
 const OUT_MS = 280
 
@@ -10,34 +11,24 @@ type Props = {
 }
 
 export function ModalShell({ open, onClose, children, className }: Props): JSX.Element | null {
-  const [present, setPresent] = useState(open)
-  const [phase, setPhase] = useState<'in' | 'out'>(open ? 'in' : 'out')
-  const [openSeen, setOpenSeen] = useState(open)
+  const [phase, setPhase] = useState<ModalPhase>(open ? 'in' : 'closed')
   const openedAt = useRef(0)
-
-  if (open !== openSeen) {
-    setOpenSeen(open)
-    if (open) {
-      setPresent(true)
-      setPhase('in')
-    } else if (present) {
-      setPhase('out')
-    }
-  } else if (!open && present && phase === 'in') {
-    setPhase('out')
-  }
+  const next = nextModalPhase(phase, open)
+  if (next !== phase) setPhase(next)
 
   useLayoutEffect(() => {
     if (open) openedAt.current = Date.now()
   }, [open])
 
   useEffect(() => {
-    if (open || phase !== 'out') return
-    const id = window.setTimeout(() => setPresent(false), OUT_MS)
+    if (phase !== 'out') return
+    const id = window.setTimeout(() => {
+      setPhase((current) => (current === 'out' ? 'closed' : current))
+    }, OUT_MS)
     return () => window.clearTimeout(id)
-  }, [open, phase])
+  }, [phase])
 
-  if (!present) return null
+  if (phase === 'closed') return null
   return (
     <div
       className={`modal-backdrop is-${phase}`}
