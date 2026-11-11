@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.15
+
+- Settings opens on macOS. The window no longer uses the hiddenInset title bar, which was swallowing clicks where the title would have been.
+
 ## 1.1.14
 
 - Dropdowns open with an animation again. The title bar no longer uses a macOS drag region, so Settings stays clickable.

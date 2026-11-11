@@ -1333,6 +1333,10 @@ export default function App(): JSX.Element {
           return
         }
       }
+      if (meta && e.key === ',' && !ex.active) {
+        e.preventDefault()
+        setSettingsOpen(true)
+      }
       if (meta && e.key.toLowerCase() === 's') {
         e.preventDefault()
         void saveCurrent()

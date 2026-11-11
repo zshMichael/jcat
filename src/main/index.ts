@@ -86,8 +86,10 @@ function createWindow(): void {
     frame: false,
     title: 'Jcat',
     backgroundColor: themeWindowBg(),
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
-    trafficLightPosition: { x: 14, y: 18 },
+    // hiddenInset leaves a dead strip where the window title would be, so clicks
+    // on Settings never arrive. hidden keeps the traffic lights without that strip.
+    titleBarStyle: 'hidden',
+    ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 14, y: 18 } } : {}),
     autoHideMenuBar: true,
     ...(process.platform !== 'darwin' ? { icon } : {}),
     webPreferences: {

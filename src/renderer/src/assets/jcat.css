@@ -217,6 +217,9 @@ body,
   font-size: 13px;
   overflow: hidden;
   user-select: none;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
   transition:
     background-color 0.35s var(--ease),
     color 0.28s var(--ease);

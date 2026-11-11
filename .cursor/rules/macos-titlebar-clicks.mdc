@@ -11,7 +11,8 @@ Cause: `-webkit-app-region: drag` anywhere in the window. With `titleBarStyle: '
 
 Rules:
 
-- Do not set `-webkit-app-region: drag` on any element. The title bar, brand, and the empty drag strip stay `no-drag`.
+- Do not set `-webkit-app-region: drag` or `app-region: drag` on any element. `html`, `body`, and the title bar stay `no-drag`.
+- The macOS window uses `titleBarStyle: 'hidden'`, not `hiddenInset`. `hiddenInset` leaves a dead strip where the window title would be, and Settings clicks never arrive there. Traffic lights stay positioned with `trafficLightPosition`.
 - Move the window from the title bar's pointer handler. Skip buttons, menus, and inputs. A 4px threshold keeps a click from becoming a drag.
 - Double-click on empty title-bar space toggles zoom, including on macOS.
 - `.actions` and `.title-end` keep an opaque `background-color` (`var(--paper)`).
