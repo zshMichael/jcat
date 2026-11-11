@@ -1715,6 +1715,14 @@ export default function App(): JSX.Element {
     setStatusMsg(tr('cutDone'))
   }
 
+  const revealNode = async (path: string): Promise<void> => {
+    try {
+      await window.jcat.workspace.reveal(path)
+    } catch {
+      setStatusMsg(tr('revealFail'))
+    }
+  }
+
   const pasteNode = async (target: string): Promise<void> => {
     if (!clipboard) return
     try {
@@ -2128,6 +2136,7 @@ export default function App(): JSX.Element {
         onCopy={copyNode}
         onCut={cutNode}
         onPaste={(target) => void pasteNode(target)}
+        onReveal={(path) => void revealNode(path)}
         onMove={(from, destDir) => void moveNode(from, destDir)}
         onCollapse={() => {
           treeOpenRef.current = false

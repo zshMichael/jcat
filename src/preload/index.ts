@@ -77,6 +77,7 @@ const api = {
       } | null>,
     rename: (from: string, name: string) =>
       ipcRenderer.invoke('workspace:rename', from, name) as Promise<string>,
+    reveal: (target: string) => ipcRenderer.invoke('workspace:reveal', target) as Promise<void>,
     delete: (target: string) => ipcRenderer.invoke('workspace:delete', target) as Promise<void>,
     transfer: (from: string, destDir: string, cut: boolean) =>
       ipcRenderer.invoke('workspace:transfer', from, destDir, cut) as Promise<string>

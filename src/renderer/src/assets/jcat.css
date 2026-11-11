@@ -737,8 +737,8 @@ body.win .debug-body {
   clip-path: inset(0 0 100% 0 round 8px);
   filter: drop-shadow(0 8px 16px rgba(44, 36, 27, 0.12));
   transition:
-    clip-path 0.28s var(--ease),
-    opacity 0.22s var(--ease);
+    clip-path 0.26s var(--ease),
+    opacity 0.16s var(--ease) 0.1s;
 }
 
 .more-menu-list {
@@ -751,6 +751,9 @@ body.win .debug-body {
   opacity: 1;
   pointer-events: auto;
   clip-path: inset(0 0 0 0 round 8px);
+  transition:
+    clip-path 0.28s var(--ease),
+    opacity 0.16s var(--ease);
 }
 
 .sort-menu.is-open .sort-caret {

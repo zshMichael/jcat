@@ -29,6 +29,7 @@ type Props = {
   onCopy: (path: string) => void
   onCut: (path: string) => void
   onPaste: (target: string) => void
+  onReveal: (path: string) => void
   onMove: (from: string, destDir: string) => void
   onCollapse: () => void
   onResizeStart: (clientX: number) => void
@@ -73,6 +74,7 @@ export function FileTree({
   onCopy,
   onCut,
   onPaste,
+  onReveal,
   onMove,
   onCollapse,
   onResizeStart,
@@ -293,6 +295,15 @@ export function FileTree({
             }}
           >
             {t('paste')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onReveal(menu.path)
+              setMenu(null)
+            }}
+          >
+            {t('showInFolder')}
           </button>
           <button
             type="button"

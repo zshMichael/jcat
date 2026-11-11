@@ -27,6 +27,7 @@ import {
   readJavaSources,
   readText,
   readTree,
+  revealEntry,
   renameEntry,
   setRoot,
   transferEntry,
@@ -309,6 +310,7 @@ function registerIpc(): void {
     saveSettings({ lastRoot: created.root })
     return created
   })
+  ipcMain.handle('workspace:reveal', (_e, target: string) => revealEntry(target))
   ipcMain.handle('workspace:rename', (_e, from: string, name: string) => renameEntry(from, name))
   ipcMain.handle('workspace:delete', (_e, target: string) => {
     deleteEntry(target)

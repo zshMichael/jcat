@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.17
+
+- The file menu can reveal the item in Finder or File Explorer. Dropdowns now animate closed as well as open.
+
 ## 1.1.16
 
 - Settings opens. The dialog was marked open while its layer was already gone, so later clicks did nothing.

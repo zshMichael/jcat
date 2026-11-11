@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog } from 'electron'
+import { BrowserWindow, dialog, shell } from 'electron'
 import {
   cpSync,
   existsSync,
@@ -209,6 +209,14 @@ export function renameEntry(from: string, name: string): string {
   if (existsSync(dest)) throw new Error('exists')
   renameSync(from, dest)
   return dest
+}
+
+export function revealEntry(target: string): void {
+  const root = currentRoot
+  if (!root || !isInsideDir(root, target) || !existsSync(target)) {
+    throw new Error('outside project')
+  }
+  shell.showItemInFolder(target)
 }
 
 export function deleteEntry(target: string): void {

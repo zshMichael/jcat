@@ -53,6 +53,7 @@ export type JcatAPI = {
     newFileDialog: () => Promise<{ root: string | null; file: string } | null>
     newFolderDialog: () => Promise<{ root: string | null; dir: string } | null>
     rename: (from: string, name: string) => Promise<string>
+    reveal: (target: string) => Promise<void>
     delete: (target: string) => Promise<void>
     transfer: (from: string, destDir: string, cut: boolean) => Promise<string>
   }
