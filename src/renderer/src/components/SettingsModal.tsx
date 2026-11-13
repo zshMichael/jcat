@@ -205,16 +205,6 @@ export function SettingsModal({ open, settings, onClose, onSave, onTheme, t }: P
           />
         </div>
         <div className="field">
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={!!form.homeworkHideLines}
-              onChange={(e) => setForm({ ...form, homeworkHideLines: e.target.checked })}
-            />{' '}
-            {t('homeworkHideLines')}
-          </label>
-        </div>
-        <div className="field">
           <label>{t('apGuide')}</label>
           <button type="button" className="ap-index-btn" onClick={() => setApOpen(true)}>
             {t('viewAp')}

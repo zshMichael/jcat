@@ -4,14 +4,18 @@ import {
   EXPORT_MIN_CARD_WIDTH,
   cardWidthForCode,
   expandExportTabs,
+  moveExportOrder,
   pngScaleToMaxWidth
 } from './exportLayout'
 
 describe('exportLayout', () => {
-  it('widens the card for a long unwrapped line', () => {
-    const longPx = 1600
-    assert.equal(cardWidthForCode(longPx, false) > EXPORT_MIN_CARD_WIDTH, true)
+  it('widens the card when a line is longer than the floor', () => {
+    assert.equal(cardWidthForCode(1600, false) > EXPORT_MIN_CARD_WIDTH, true)
+  })
+
+  it('lets a short file stay near its own width', () => {
     assert.equal(cardWidthForCode(100, false), EXPORT_MIN_CARD_WIDTH)
+    assert.equal(EXPORT_MIN_CARD_WIDTH < 880, true)
   })
 
   it('omits the line-number gutter when lines are hidden', () => {
@@ -21,6 +25,11 @@ describe('exportLayout', () => {
   it('scales a too-wide png down without stretching', () => {
     assert.equal(pngScaleToMaxWidth(2000), 1)
     assert.equal(pngScaleToMaxWidth(5760), 0.5)
+  })
+
+  it('moves a card without dropping the others', () => {
+    assert.deepEqual(moveExportOrder(['a', 'b', 'c'], 0, 2), ['b', 'c', 'a'])
+    assert.deepEqual(moveExportOrder(['a', 'b'], 1, 1), ['a', 'b'])
   })
 
   it('expands tabs before measuring', () => {

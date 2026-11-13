@@ -8,6 +8,16 @@ const RUN_CHUNK = 80
 const CODE_FONT =
   '13px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
 
+export type ExportPiece = {
+  fileName: string
+  className: string
+  code: string
+  compileOk: boolean | null
+  runExcerpt: string
+}
+
+export type ExportDirection = 'vertical' | 'horizontal'
+
 export type HomeworkMeta = {
   className: string
   fileName: string
@@ -33,11 +43,22 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-async function stitch(dataUrls: string[], paper: string): Promise<string> {
+async function stitch(
+  dataUrls: string[],
+  paper: string,
+  direction: ExportDirection = 'vertical',
+  gap = 0
+): Promise<string> {
   if (dataUrls.length === 1) return dataUrls[0]
   const imgs = await Promise.all(dataUrls.map(loadImage))
-  const width = Math.max(...imgs.map((i) => i.width))
-  const height = imgs.reduce((sum, i) => sum + i.height, 0)
+  const width =
+    direction === 'vertical'
+      ? Math.max(...imgs.map((i) => i.width))
+      : imgs.reduce((sum, i) => sum + i.width, 0) + gap * (imgs.length - 1)
+  const height =
+    direction === 'vertical'
+      ? imgs.reduce((sum, i) => sum + i.height, 0) + gap * (imgs.length - 1)
+      : Math.max(...imgs.map((i) => i.height))
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
@@ -45,10 +66,15 @@ async function stitch(dataUrls: string[], paper: string): Promise<string> {
   if (!ctx) return dataUrls[0]
   ctx.fillStyle = paper
   ctx.fillRect(0, 0, width, height)
-  let y = 0
+  let cursor = 0
   for (const img of imgs) {
-    ctx.drawImage(img, 0, y)
-    y += img.height
+    if (direction === 'vertical') {
+      ctx.drawImage(img, 0, cursor)
+      cursor += img.height + gap
+    } else {
+      ctx.drawImage(img, cursor, 0)
+      cursor += img.width + gap
+    }
   }
   return canvas.toDataURL('image/png')
 }
@@ -161,6 +187,30 @@ export async function renderCodePng(
 
   host.innerHTML = ''
   return fitPng(await stitch(urls, meta.paper))
+}
+
+export async function renderExportPng(
+  monaco: typeof Monaco,
+  pieces: ExportPiece[],
+  meta: Omit<HomeworkMeta, 'className' | 'fileName' | 'compileOk' | 'runExcerpt'> & {
+    direction: ExportDirection
+  }
+): Promise<string> {
+  const urls: string[] = []
+  for (const piece of pieces) {
+    if (!piece.code.trim()) continue
+    urls.push(
+      await renderCodePng(monaco, piece.code, {
+        ...meta,
+        className: piece.className,
+        fileName: piece.fileName,
+        compileOk: piece.compileOk,
+        runExcerpt: piece.runExcerpt
+      })
+    )
+  }
+  if (urls.length === 0) throw new Error('没有可导出的代码')
+  return fitPng(await stitch(urls, meta.paper, meta.direction, urls.length > 1 ? 28 : 0))
 }
 
 function escapeHtml(text: string): string {

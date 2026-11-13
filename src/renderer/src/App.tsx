@@ -42,7 +42,7 @@ import { ExamReference, SidePanel } from './components/SidePanel'
 import { SettingsModal } from './components/SettingsModal'
 import { dailyMotto, t, type Msg } from './i18n'
 import { applyMarkers } from './editor/markers'
-import { renderCodePng } from './editor/exportImage'
+import { ExportSheet, type ExportSource } from './components/ExportSheet'
 import {
   registerInlineCompletions,
   setInlineCompletionDelay,
@@ -57,7 +57,7 @@ import { WindowControls } from './components/WindowControls'
 import { splitOutput } from './run/outputLinks'
 import { TraceView } from './run/TraceView'
 import { formatJava } from './editor/formatJava'
-import { parseJavaOutline, publicClassInfo, classFileAction } from './editor/javaOutline'
+import { parseJavaOutline, classFileAction } from './editor/javaOutline'
 import { startNextDebugTurn } from './debug/debugParts'
 import {
   paintApHints,
@@ -338,7 +338,6 @@ export default function App(): JSX.Element {
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
   const [lastCompileOk, setLastCompileOk] = useState<boolean | null>(null)
   const [classClash, setClassClash] = useState<Diagnostic | null>(null)
-  const [exporting, setExporting] = useState(false)
   const [stage, setStage] = useState<'editor' | 'run'>('editor')
   const [zoom, setZoom] = useState(1)
   const [stageSize, setStageSize] = useState({ w: 0, h: 0 })
@@ -371,6 +370,8 @@ export default function App(): JSX.Element {
   const [treeWidth, setTreeWidth] = useState(TREE_DEFAULT)
   const [treeResizing, setTreeResizing] = useState(false)
   const [winMaximized, setWinMaximized] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [monacoApi, setMonacoApi] = useState<typeof monaco | null>(null)
   const editorRef = useRef<EditorView | null>(null)
   const monacoRef = useRef<typeof monaco | null>(null)
   const stageRef = useRef<HTMLElement | null>(null)
@@ -1266,47 +1267,47 @@ export default function App(): JSX.Element {
     setDebugging(false)
   }
 
-  const exportImage = async (): Promise<void> => {
-    const monacoApi = monacoRef.current
-    if (!monacoApi || !openFile) return
-    const editor = editorRef.current
-    const selected = editor?.getModel()
-      ? editor.getModel()!.getValueInRange(editor.getSelection()!)
-      : ''
-    const code = selected && selected.trim() ? selected : currentCode
-    if (!code) return
-    setExporting(true)
-    setStatusMsg(tr('exporting'))
-    try {
-      const card = THEME_CARDS.find((item) => item.id === themeId)
-      const cls = publicClassInfo(currentCode)?.name || fileName.replace(/\.java$/i, '') || 'Main'
-      const dataUrl = await renderCodePng(monacoApi, code, {
-        className: cls,
-        fileName: fileName || 'code.java',
-        compileOk: lastCompileOk,
-        runExcerpt: exportRunText(output),
-        hideLines: !!settings?.homeworkHideLines,
-        paper: card?.swatches[0] ?? '#F6F1EA',
-        ink: card?.swatches[1] ?? '#2C241B',
-        accent: card?.swatches[2] ?? '#C46B4A',
-        muted: card?.swatches[3] ?? '#E6DCD0',
-        themeName: card?.name ?? 'Jcat',
-        cardLabel: tr('homeworkCard'),
-        compileLabel:
-          lastCompileOk === null
-            ? tr('compileUnknown')
-            : lastCompileOk
-              ? tr('compileOk')
-              : tr('compileFail'),
-        runLabel: tr('runExcerpt')
-      })
-      const savedPath = await window.jcat.exportImage.savePng(dataUrl, `${cls}.png`)
-      setStatusMsg(savedPath ? tr('exportSaved').replace('{path}', savedPath) : tr('exportCancel'))
-    } catch (err) {
-      setStatusMsg((err as Error).message)
-    } finally {
-      setExporting(false)
+  const loadMergedExport = useCallback(async (): Promise<ExportSource[]> => {
+    if (!root) return []
+    const normRoot = root.replace(/\\/g, '/').replace(/\/$/, '')
+    const relOf = (file: string): string => {
+      const norm = file.replace(/\\/g, '/')
+      return norm.startsWith(`${normRoot}/`) ? norm.slice(normRoot.length + 1) : ''
     }
+    const found: { path: string; name: string; rel: string }[] = []
+    const walk = (nodes: FileNode[]): void => {
+      for (const node of nodes) {
+        if (node.isDir) {
+          if (node.children) walk(node.children)
+          continue
+        }
+        if (!node.name.toLowerCase().endsWith('.java')) continue
+        const rel = relOf(node.path)
+        if (rel) found.push({ path: node.path, name: node.name, rel })
+      }
+    }
+    walk(tree)
+    const hasPom = tree.some((node) => !node.isDir && node.name === 'pom.xml')
+    const layout = projectLayout(
+      found.map((file) => file.rel),
+      hasPom
+    )
+    const unit = projectOf(layout, openFile ? relOf(openFile) : '')
+    const picked = unit
+      ? found.filter((file) => file.rel === unit || file.rel.startsWith(`${unit}/`))
+      : found
+    const pieces: ExportSource[] = []
+    for (const file of picked) {
+      const code = buffers[file.path] ?? (await window.jcat.workspace.read(file.path))
+      if (code.trim()) pieces.push({ path: file.path, name: file.name, code })
+    }
+    return pieces
+  }, [buffers, openFile, root, tree])
+
+  const saveExport = async (dataUrl: string, name: string): Promise<string | null> => {
+    const savedPath = await window.jcat.exportImage.savePng(dataUrl, name)
+    setStatusMsg(savedPath ? tr('exportSaved').replace('{path}', savedPath) : tr('exportCancel'))
+    return savedPath
   }
 
   useEffect(() => {
@@ -2038,33 +2039,13 @@ export default function App(): JSX.Element {
                 {examMode ? null : (
                   <button
                     type="button"
-                    disabled={!openFile || exporting}
+                    disabled={!openFile}
                     onClick={() => {
                       setMoreOpen(false)
-                      void exportImage()
+                      setExportOpen(true)
                     }}
                   >
                     {tr('longImage')}
-                  </button>
-                )}
-                {examMode ? null : (
-                  <button
-                    type="button"
-                    className={settings?.homeworkHideLines ? 'is-on' : ''}
-                    onClick={() => {
-                      setMoreOpen(false)
-                      if (!settings) return
-                      void (async () => {
-                        const saved = await window.jcat.settings.save({
-                          homeworkHideLines: !settings.homeworkHideLines
-                        })
-                        setSettings(saved)
-                      })()
-                    }}
-                  >
-                    {settings?.homeworkHideLines
-                      ? tr('homeworkShowLines')
-                      : tr('homeworkHideLines')}
                   </button>
                 )}
                 {examMode ? null : (
@@ -2254,6 +2235,7 @@ export default function App(): JSX.Element {
                   onMount={(editor, monacoApi) => {
                     editorRef.current = editor
                     monacoRef.current = monacoApi
+                    setMonacoApi(monacoApi)
                     defineJcatThemes(monacoApi)
                     monacoApi.editor.setTheme(monacoThemeName(themeId))
                     registerInlineCompletions(monacoApi)
@@ -2646,6 +2628,64 @@ export default function App(): JSX.Element {
           </button>
         </div>
       </ModalShell>
+      <ExportSheet
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        monaco={monacoApi}
+        hideLines={!!settings?.homeworkHideLines}
+        onHideLines={(value) => {
+          if (!settings) return
+          setSettings({ ...settings, homeworkHideLines: value })
+          void window.jcat.settings.save({ homeworkHideLines: value })
+        }}
+        active={
+          exportOpen && openFile && currentCode.trim()
+            ? {
+                path: openFile,
+                name: fileName || 'code.java',
+                code: debugSel?.text?.trim() ? debugSel.text : currentCode
+              }
+            : null
+        }
+        loadMerged={loadMergedExport}
+        initialTheme={themeId}
+        themeNames={{
+          paper: tr('themePaper'),
+          macaron: tr('themeMacaron'),
+          voyage: tr('themeVoyage'),
+          peach: tr('themePeach'),
+          lemon: tr('themeLemon'),
+          blueberry: tr('themeBlueberry'),
+          ink: tr('themeInk'),
+          celadon: tr('themeCeladon')
+        }}
+        compileOk={lastCompileOk}
+        runExcerpt={exportRunText(output)}
+        labels={{
+          title: tr('longImage'),
+          hideLines: tr('exportHideLines'),
+          merge: tr('exportMerge'),
+          vertical: tr('exportVertical'),
+          horizontal: tr('exportHorizontal'),
+          run: tr('exportRun'),
+          order: tr('exportOrder'),
+          theme: tr('exportTheme'),
+          save: tr('save'),
+          cancel: tr('cancel'),
+          rendering: tr('exportRendering'),
+          empty: tr('exportEmpty')
+        }}
+        compileLabel={
+          lastCompileOk === null
+            ? tr('compileUnknown')
+            : lastCompileOk
+              ? tr('compileOk')
+              : tr('compileFail')
+        }
+        runLabel={tr('runExcerpt')}
+        cardLabel={tr('homeworkCard')}
+        onSave={saveExport}
+      />
       <div id="jcat-export-host" />
     </div>
   )

@@ -1,4 +1,4 @@
-export const EXPORT_MIN_CARD_WIDTH = 880
+export const EXPORT_MIN_CARD_WIDTH = 360
 export const EXPORT_MAX_PNG_WIDTH = 2880
 export const EXPORT_PAD_X = 64
 export const EXPORT_LINE_GUTTER = 52
@@ -15,6 +15,14 @@ export function cardWidthForCode(
 ): number {
   const extra = hideLines ? 0 : gutter
   return Math.max(EXPORT_MIN_CARD_WIDTH, Math.ceil(maxLinePx + paddingX + extra))
+}
+
+export function moveExportOrder<T>(items: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return items
+  const next = items.slice()
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
 }
 
 export function pngScaleToMaxWidth(width: number, maxWidth = EXPORT_MAX_PNG_WIDTH): number {

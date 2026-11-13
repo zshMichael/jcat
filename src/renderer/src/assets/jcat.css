@@ -2095,9 +2095,136 @@ input[type='checkbox']:checked::after {
   pointer-events: none;
 }
 
-.export-card {
-  width: 880px;
-  min-width: 880px;
+.export-sheet.modal {
+  width: min(68vw, calc(74vh * 1.618));
+  height: min(74vh, calc(68vw / 1.618));
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.export-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.export-sheet-head h3 {
+  margin: 0;
+}
+
+.export-sheet-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.export-preview {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-2);
+  padding: 12px;
+}
+
+.export-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.export-preview p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.export-options {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+
+.export-options .check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-themes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.export-themes button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 4px 8px;
+}
+
+.export-themes button i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.export-themes button.is-on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.export-dir {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.export-dir button.is-on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.export-order-label {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.export-order {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.export-order button {
+  text-align: left;
+  cursor: grab;
+}
+
+.export-order button.is-drag {
+  background: var(--active-row);
+}
+  min-width: 0;
   max-width: none;
   overflow: visible;
   background: #f6f1ea;
