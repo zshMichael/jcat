@@ -219,7 +219,6 @@ body,
   user-select: none;
   -webkit-app-region: no-drag;
   app-region: no-drag;
-}
   transition:
     background-color 0.35s var(--ease),
     color 0.28s var(--ease);
@@ -567,9 +566,16 @@ body.linux .title-drag {
   height: 10px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke-width: 1;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  shape-rendering: geometricPrecision;
+}
+
+.titlebar .win-cap {
+  transition:
+    background-color 0.08s linear,
+    color 0.08s linear;
 }
 
 .win-cap:hover:not(:disabled) {
@@ -577,13 +583,42 @@ body.linux .title-drag {
 }
 
 .win-close:hover:not(:disabled) {
-  background: #e81123;
+  background: #c42b1c;
   color: #fff;
 }
 
-body.win .title-end {
+.win-cap:active:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.win-close:active:not(:disabled) {
+  background: #b42617;
+  color: #fff;
+}
+
+body.win .titlebar {
+  padding-right: var(--caption-w, 138px);
+}
+
+body.win.caps-fallback .titlebar {
   padding-right: 0;
+}
+
+body.win .window-controls {
+  display: none;
+}
+
+body.win.caps-fallback .window-controls {
+  display: flex;
+}
+
+body.win .title-end {
+  padding-right: 8px;
   min-width: 0;
+}
+
+body.win.caps-fallback .title-end {
+  padding-right: 0;
 }
 
 body.win .exam-seg button {
@@ -597,9 +632,27 @@ body.win .exam-mcq-clock {
 }
 
 body.win {
-  --serif: Georgia, 'Palatino Linotype', 'Microsoft YaHei UI', serif;
-  --sans: 'Segoe UI', 'Segoe UI Variable Text', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
-  --mono: 'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  --title-h: 40px;
+  --serif:
+    'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+  --sans: 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+  --mono: 'Cascadia Code', 'Cascadia Mono', Consolas, 'Microsoft YaHei UI', monospace;
+  font-size: 14px;
+  -webkit-font-smoothing: subpixel-antialiased;
+  font-optical-sizing: auto;
+}
+
+body.win .titlebar h1,
+body.win .run-head,
+body.win .filetree-head h2,
+body.win .debug-head h2 {
+  font-family: var(--sans);
+  letter-spacing: 0;
+}
+
+body.win .titlebar h1 {
+  font-size: 14px;
+  font-weight: 600;
 }
 
 body.win ::-webkit-scrollbar {
@@ -2129,9 +2182,9 @@ input[type='checkbox']:checked::after {
 .export-preview {
   min-width: 0;
   min-height: 0;
-  display: grid;
-  place-items: center;
-  overflow: auto;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--paper-2);
@@ -2139,25 +2192,71 @@ input[type='checkbox']:checked::after {
 }
 
 .export-preview-frame {
-  max-width: 100%;
-  max-height: 100%;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   border-radius: 14px;
   overflow: hidden;
-  line-height: 0;
+  cursor: grab;
+  touch-action: none;
+  background: var(--paper);
+}
+
+.export-preview-frame.is-panning {
+  cursor: grabbing;
 }
 
 .export-preview img {
+  position: absolute;
+  left: 0;
+  top: 0;
   display: block;
-  max-width: 100%;
-  max-height: 100%;
+  max-width: none;
   width: auto;
   height: auto;
-  object-fit: contain;
-  border-radius: 14px;
+  transform-origin: 0 0;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.export-preview-reset {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 1;
+  transform: translateX(-50%) translateY(8px);
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  background: color-mix(in srgb, var(--paper) 46%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  letter-spacing: 0;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 14%, transparent);
+  transition:
+    opacity 0.2s var(--ease),
+    transform 0.22s var(--ease),
+    background-color 0.2s var(--ease);
+}
+
+.export-preview-reset.is-on {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.export-preview-reset:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--paper) 64%, transparent);
 }
 
 .export-preview p {
-  margin: 0;
+  margin: auto;
   color: var(--ink-soft);
 }
 
@@ -2241,7 +2340,7 @@ input[type='checkbox']:checked::after {
   overflow: visible;
   background: #f6f1ea;
   color: #2c241b;
-  padding: 36px 44px 44px 56px;
+  padding: 36px 80px 44px 56px;
   box-sizing: border-box;
 }
 

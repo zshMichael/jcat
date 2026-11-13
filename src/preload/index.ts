@@ -20,7 +20,8 @@ const api = {
     maximize: () => ipcRenderer.invoke('window:maximize') as Promise<boolean>,
     close: () => ipcRenderer.invoke('window:close'),
     isMaximized: () => ipcRenderer.invoke('window:isMaximized') as Promise<boolean>,
-    setBackground: (color: string) => ipcRenderer.invoke('window:setBackground', color),
+    setBackground: (color: string, symbol?: string) =>
+      ipcRenderer.invoke('window:setBackground', color, symbol),
     getPosition: () => ipcRenderer.invoke('window:getPosition') as Promise<[number, number]>,
     setPosition: (x: number, y: number) => ipcRenderer.invoke('window:setPosition', x, y),
     onMaximized: (cb: (maximized: boolean) => void) => {

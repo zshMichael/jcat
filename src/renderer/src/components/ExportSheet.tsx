@@ -18,6 +18,51 @@ export type ExportSource = {
   code: string
 }
 
+type Box = { w: number; h: number }
+
+type PreviewView = {
+  x: number
+  y: number
+  scale: number
+  baseX: number
+  baseY: number
+  baseScale: number
+}
+
+function coverScale(frame: Box, image: Box): number {
+  if (frame.w <= 0 || frame.h <= 0 || image.w <= 0 || image.h <= 0) return 1
+  return Math.max(frame.w / image.w, frame.h / image.h)
+}
+
+function containScale(frame: Box, image: Box): number {
+  if (frame.w <= 0 || frame.h <= 0 || image.w <= 0 || image.h <= 0) return 1
+  return Math.min(frame.w / image.w, frame.h / image.h)
+}
+
+function clampNum(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function clampPan(
+  x: number,
+  y: number,
+  scale: number,
+  frame: Box,
+  image: Box
+): { x: number; y: number } {
+  const width = image.w * scale
+  const height = image.h * scale
+  const xRange: [number, number] = width <= frame.w ? [0, frame.w - width] : [frame.w - width, 0]
+  const yRange: [number, number] = height <= frame.h ? [0, frame.h - height] : [frame.h - height, 0]
+  return { x: clampNum(x, xRange[0], xRange[1]), y: clampNum(y, yRange[0], yRange[1]) }
+}
+
+function scaleBounds(frame: Box, image: Box): { min: number; max: number; cover: number } {
+  const cover = coverScale(frame, image)
+  const contain = containScale(frame, image)
+  return { min: contain * 0.4, max: Math.max(cover, contain) * 6, cover }
+}
+
 type Props = {
   open: boolean
   onClose: () => void
@@ -43,6 +88,7 @@ type Props = {
     cancel: string
     rendering: string
     empty: string
+    reset: string
   }
   compileLabel: string
   runLabel: string
@@ -78,8 +124,13 @@ export function ExportSheet({
   const [preview, setPreview] = useState('')
   const [busy, setBusy] = useState(false)
   const [dragging, setDragging] = useState<number | null>(null)
+  const [shifted, setShifted] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
   const dragFrom = useRef<number | null>(null)
+  const frameRef = useRef<HTMLDivElement | null>(null)
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const view = useRef<PreviewView>({ x: 0, y: 0, scale: 1, baseX: 0, baseY: 0, baseScale: 1 })
+  const pan = useRef<{ id: number; x: number; y: number; ox: number; oy: number } | null>(null)
 
   if (open !== seen) {
     setSeen(open)
@@ -89,6 +140,7 @@ export function ExportSheet({
       setIncludeRun(true)
       setPreviewTheme(initialTheme)
       setPreview('')
+      setShifted(false)
       setSources(active ? [active] : [])
       setOrder(active ? [active.path] : [])
     }
@@ -181,6 +233,121 @@ export function ExportSheet({
     runLabel
   ])
 
+  const boxes = (): { frame: Box; image: Box } | null => {
+    const frame = frameRef.current
+    const img = imgRef.current
+    if (!frame || !img || !img.naturalWidth || !img.naturalHeight) return null
+    return {
+      frame: { w: frame.clientWidth, h: frame.clientHeight },
+      image: { w: img.naturalWidth, h: img.naturalHeight }
+    }
+  }
+
+  const paintView = (): void => {
+    const img = imgRef.current
+    if (!img) return
+    const v = view.current
+    img.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.scale})`
+  }
+
+  const syncShifted = (): void => {
+    const v = view.current
+    const next =
+      Math.abs(v.x - v.baseX) > 0.6 ||
+      Math.abs(v.y - v.baseY) > 0.6 ||
+      Math.abs(v.scale / v.baseScale - 1) > 0.01
+    setShifted(next)
+  }
+
+  const resetView = (): void => {
+    const box = boxes()
+    if (!box) return
+    const scale = coverScale(box.frame, box.image)
+    const pos = clampPan(0, 0, scale, box.frame, box.image)
+    view.current = { x: pos.x, y: pos.y, scale, baseX: pos.x, baseY: pos.y, baseScale: scale }
+    paintView()
+    setShifted(false)
+  }
+
+  useEffect(() => {
+    const frame = frameRef.current
+    if (!frame || !preview) return
+    const onWheel = (event: WheelEvent): void => {
+      event.preventDefault()
+      const box = boxes()
+      if (!box) return
+      const bounds = scaleBounds(box.frame, box.image)
+      const dy = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY
+      const v = view.current
+      const next = clampNum(v.scale * Math.exp(-dy * 0.0016), bounds.min, bounds.max)
+      if (next === v.scale) return
+      const rect = frame.getBoundingClientRect()
+      const px = event.clientX - rect.left
+      const py = event.clientY - rect.top
+      const ratio = next / v.scale
+      const moved = clampPan(
+        px - (px - v.x) * ratio,
+        py - (py - v.y) * ratio,
+        next,
+        box.frame,
+        box.image
+      )
+      view.current = { ...v, x: moved.x, y: moved.y, scale: next }
+      paintView()
+      syncShifted()
+    }
+    frame.addEventListener('wheel', onWheel, { passive: false })
+    const observer = new ResizeObserver(() => {
+      const v = view.current
+      const home =
+        Math.abs(v.x - v.baseX) < 0.6 &&
+        Math.abs(v.y - v.baseY) < 0.6 &&
+        Math.abs(v.scale / v.baseScale - 1) < 0.01
+      if (home) resetView()
+    })
+    observer.observe(frame)
+    return () => {
+      frame.removeEventListener('wheel', onWheel)
+      observer.disconnect()
+    }
+    // The listeners only read refs and the latest DOM boxes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview])
+
+  const onPreviewPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.button !== 0) return
+    if ((event.target as HTMLElement).closest('button')) return
+    event.preventDefault()
+    const v = view.current
+    pan.current = { id: event.pointerId, x: event.clientX, y: event.clientY, ox: v.x, oy: v.y }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    event.currentTarget.classList.add('is-panning')
+  }
+
+  const onPreviewPointerMove = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const drag = pan.current
+    if (!drag || drag.id !== event.pointerId) return
+    const box = boxes()
+    if (!box) return
+    const moved = clampPan(
+      drag.ox + event.clientX - drag.x,
+      drag.oy + event.clientY - drag.y,
+      view.current.scale,
+      box.frame,
+      box.image
+    )
+    view.current.x = moved.x
+    view.current.y = moved.y
+    paintView()
+    syncShifted()
+  }
+
+  const onPreviewPointerUp = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (pan.current?.id !== event.pointerId) return
+    pan.current = null
+    event.currentTarget.classList.remove('is-panning')
+  }
+
   const rowAt = (clientY: number): number => {
     const rows = listRef.current?.querySelectorAll<HTMLElement>('[data-row]')
     if (!rows || rows.length === 0) return 0
@@ -237,8 +404,30 @@ export function ExportSheet({
       <div className="export-sheet-body">
         <div className="export-preview">
           {preview ? (
-            <div className="export-preview-frame">
-              <img src={preview} alt={labels.title} />
+            <div
+              className="export-preview-frame"
+              ref={frameRef}
+              onPointerDown={onPreviewPointerDown}
+              onPointerMove={onPreviewPointerMove}
+              onPointerUp={onPreviewPointerUp}
+              onPointerCancel={onPreviewPointerUp}
+              onDragStart={(event) => event.preventDefault()}
+            >
+              <img
+                ref={imgRef}
+                src={preview}
+                alt={labels.title}
+                draggable={false}
+                onLoad={resetView}
+                onDragStart={(event) => event.preventDefault()}
+              />
+              <button
+                type="button"
+                className={shifted ? 'export-preview-reset is-on' : 'export-preview-reset'}
+                onClick={resetView}
+              >
+                {labels.reset}
+              </button>
             </div>
           ) : (
             <p>{busy ? labels.rendering : labels.empty}</p>

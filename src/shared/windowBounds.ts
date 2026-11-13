@@ -1,7 +1,11 @@
 export const WINDOW_MIN_W = 960
 export const WINDOW_MIN_H = 640
-export const WINDOW_SCALE = 0.78
-export const WINDOW_MARGIN = 32
+/** Share of the work area used on first open. 0.92 fills a 27-inch 2K display. */
+export const WINDOW_SCALE = 0.92
+/** Minimum gap kept between the window and the work-area edge. */
+export const WINDOW_MARGIN = 48
+/** Windows caption-button height. Keep in sync with `body.win { --title-h }`. */
+export const WIN_CAPTION_HEIGHT = 40
 
 export type WorkArea = { x: number; y: number; width: number; height: number }
 export type WindowBounds = { x: number; y: number; width: number; height: number }

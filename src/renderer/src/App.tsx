@@ -488,7 +488,7 @@ export default function App(): JSX.Element {
   const applyTheme = useCallback((id: ThemeId): void => {
     document.documentElement.setAttribute('data-theme', id)
     const card = THEME_CARDS.find((item) => item.id === id)
-    if (card) void window.jcat.window.setBackground(card.windowBg)
+    if (card) void window.jcat.window.setBackground(card.windowBg, card.swatches[1])
     monacoRef.current?.editor.setTheme(monacoThemeName(id))
   }, [])
 
@@ -586,7 +586,7 @@ export default function App(): JSX.Element {
       setSettings(s)
       document.documentElement.setAttribute('data-theme', s.theme)
       const card = THEME_CARDS.find((item) => item.id === s.theme)
-      if (card) void window.jcat.window.setBackground(card.windowBg)
+      if (card) void window.jcat.window.setBackground(card.windowBg, card.swatches[1])
       setInlineCompletionEnabled(s.completionEnabled)
       setInlineCompletionDelay(s.completionDelayMs)
       setInlineCompletionLocale(s.locale)
@@ -634,6 +634,43 @@ export default function App(): JSX.Element {
       offChunk()
       offCompiled()
       offMax()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (window.jcat.platform !== 'win32') return
+    const wco = (
+      navigator as Navigator & {
+        windowControlsOverlay?: {
+          visible: boolean
+          getTitlebarAreaRect: () => DOMRect
+          addEventListener: (type: 'geometrychange', cb: () => void) => void
+          removeEventListener: (type: 'geometrychange', cb: () => void) => void
+        }
+      }
+    ).windowControlsOverlay
+    const apply = (): void => {
+      const visible = !!wco?.visible
+      document.body.classList.toggle('caps-fallback', !visible)
+      if (!visible || !wco) {
+        document.documentElement.style.removeProperty('--caption-w')
+        return
+      }
+      const rect = wco.getTitlebarAreaRect()
+      const caption = Math.max(0, Math.round(window.innerWidth - rect.width - rect.x))
+      if (caption < 80 || caption > 220) {
+        document.documentElement.style.removeProperty('--caption-w')
+        return
+      }
+      document.documentElement.style.setProperty('--caption-w', `${caption}px`)
+    }
+    apply()
+    wco?.addEventListener('geometrychange', apply)
+    window.addEventListener('resize', apply)
+    return () => {
+      wco?.removeEventListener('geometrychange', apply)
+      window.removeEventListener('resize', apply)
+      document.body.classList.remove('caps-fallback')
     }
   }, [])
 
@@ -1775,8 +1812,8 @@ export default function App(): JSX.Element {
 
   const editorFont =
     window.jcat.platform === 'win32'
-      ? 'Cascadia Code, Cascadia Mono, Consolas, Courier New, monospace'
-      : 'SF Mono, ui-monospace, Menlo, Consolas, monospace'
+      ? "'Cascadia Code', 'Cascadia Mono', Consolas, 'Microsoft YaHei UI', monospace"
+      : "'SF Mono', ui-monospace, Menlo, Consolas, monospace"
 
   const startTreeResize = (startX: number): void => {
     const origin = treeOpenRef.current ? treeWidthRef.current : 0
@@ -2673,7 +2710,8 @@ export default function App(): JSX.Element {
           save: tr('save'),
           cancel: tr('cancel'),
           rendering: tr('exportRendering'),
-          empty: tr('exportEmpty')
+          empty: tr('exportEmpty'),
+          reset: tr('exportReset')
         }}
         compileLabel={
           lastCompileOk === null

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  EXPORT_LINE_GUTTER,
   EXPORT_MIN_CARD_WIDTH,
+  EXPORT_PAD_X,
   cardWidthForCode,
   expandExportTabs,
   moveExportOrder,
@@ -13,9 +15,10 @@ describe('exportLayout', () => {
     assert.equal(cardWidthForCode(1600, false) > EXPORT_MIN_CARD_WIDTH, true)
   })
 
-  it('keeps the old card wide enough for the header', () => {
+  it('uses a modest floor for short lines and grows for long ones', () => {
     assert.equal(cardWidthForCode(100, false), EXPORT_MIN_CARD_WIDTH)
-    assert.equal(EXPORT_MIN_CARD_WIDTH, 880)
+    assert.equal(EXPORT_MIN_CARD_WIDTH, 480)
+    assert.equal(cardWidthForCode(700, false), 700 + EXPORT_PAD_X + EXPORT_LINE_GUTTER)
   })
 
   it('omits the line-number gutter when lines are hidden', () => {

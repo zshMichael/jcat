@@ -1,6 +1,8 @@
-export const EXPORT_MIN_CARD_WIDTH = 880
+/** Floor for a short snippet. Longer lines grow past this in `cardWidthForCode`. */
+export const EXPORT_MIN_CARD_WIDTH = 480
 export const EXPORT_MAX_PNG_WIDTH = 2880
-export const EXPORT_PAD_X = 100
+/** Left 56px plus right 80px. Keep in step with `.export-card` padding. */
+export const EXPORT_PAD_X = 136
 export const EXPORT_LINE_GUTTER = 52
 
 export function expandExportTabs(line: string): string {

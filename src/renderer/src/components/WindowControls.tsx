@@ -17,7 +17,7 @@ export function WindowControls({ maximized, t }: Props): JSX.Element {
         onClick={() => void window.jcat.window.minimize()}
       >
         <svg viewBox="0 0 10 10" aria-hidden="true">
-          <path d="M1 5h8" />
+          <path d="M1 5.5h8" />
         </svg>
       </button>
       <button
@@ -29,12 +29,12 @@ export function WindowControls({ maximized, t }: Props): JSX.Element {
       >
         {maximized ? (
           <svg viewBox="0 0 10 10" aria-hidden="true">
-            <path d="M3 3.2h4.2v4.2H3z" />
-            <path d="M2.2 4.4V2.2H6.8" />
+            <rect x="2.5" y="2.5" width="6" height="6" />
+            <path d="M3.5 2.5V1.5H8.5V6.5H7.5" />
           </svg>
         ) : (
           <svg viewBox="0 0 10 10" aria-hidden="true">
-            <rect x="1.6" y="1.6" width="6.8" height="6.8" rx="0.4" />
+            <rect x="1.5" y="1.5" width="7" height="7" />
           </svg>
         )}
       </button>
@@ -46,7 +46,7 @@ export function WindowControls({ maximized, t }: Props): JSX.Element {
         onClick={() => void window.jcat.window.close()}
       >
         <svg viewBox="0 0 10 10" aria-hidden="true">
-          <path d="M2 2l6 6M8 2L2 8" />
+          <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" />
         </svg>
       </button>
     </div>

@@ -41,7 +41,12 @@ import type {
   Locale
 } from '../shared/types'
 import { THEME_CARDS } from '../shared/themes'
-import { initialWindowBounds, WINDOW_MIN_H, WINDOW_MIN_W } from '../shared/windowBounds'
+import {
+  initialWindowBounds,
+  WIN_CAPTION_HEIGHT,
+  WINDOW_MIN_H,
+  WINDOW_MIN_W
+} from '../shared/windowBounds'
 
 function savedLocale(): Locale {
   try {
@@ -67,9 +72,22 @@ try {
 
 let mainWindow: BrowserWindow | null = null
 
-function themeWindowBg(): string {
+function themeChrome(): { bg: string; symbol: string } {
   const theme = loadSettings().theme
-  return THEME_CARDS.find((item) => item.id === theme)?.windowBg ?? '#F6F1EA'
+  const card = THEME_CARDS.find((item) => item.id === theme)
+  return {
+    bg: card?.windowBg ?? '#F6F1EA',
+    symbol: card?.swatches[1] ?? '#2C241B'
+  }
+}
+
+function paintWindowChrome(bg: string, symbol?: string): void {
+  if (!mainWindow || typeof bg !== 'string' || !bg.startsWith('#')) return
+  mainWindow.setBackgroundColor(bg)
+  if (process.platform !== 'win32') return
+  const symbolColor =
+    typeof symbol === 'string' && symbol.startsWith('#') ? symbol : themeChrome().symbol
+  mainWindow.setTitleBarOverlay({ color: bg, symbolColor, height: WIN_CAPTION_HEIGHT })
 }
 
 function send(channel: string, ...args: unknown[]): void {
@@ -79,6 +97,7 @@ function send(channel: string, ...args: unknown[]): void {
 function createWindow(): void {
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
   const bounds = initialWindowBounds(display.workArea)
+  const chrome = themeChrome()
   mainWindow = new BrowserWindow({
     ...bounds,
     minWidth: WINDOW_MIN_W,
@@ -86,11 +105,20 @@ function createWindow(): void {
     show: false,
     frame: false,
     title: 'Jcat',
-    backgroundColor: themeWindowBg(),
+    backgroundColor: chrome.bg,
     // hiddenInset leaves a dead strip where the window title would be, so clicks
     // on Settings never arrive. hidden keeps the traffic lights without that strip.
     titleBarStyle: 'hidden',
     ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 14, y: 18 } } : {}),
+    ...(process.platform === 'win32'
+      ? {
+          titleBarOverlay: {
+            color: chrome.bg,
+            symbolColor: chrome.symbol,
+            height: WIN_CAPTION_HEIGHT
+          }
+        }
+      : {}),
     autoHideMenuBar: true,
     ...(process.platform !== 'darwin' ? { icon } : {}),
     webPreferences: {
@@ -149,8 +177,8 @@ function registerIpc(): void {
   })
   ipcMain.handle('window:close', () => mainWindow?.close())
   ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized() ?? false)
-  ipcMain.handle('window:setBackground', (_e, color: string) => {
-    if (typeof color === 'string' && color.startsWith('#')) mainWindow?.setBackgroundColor(color)
+  ipcMain.handle('window:setBackground', (_e, color: string, symbol?: string) => {
+    paintWindowChrome(color, symbol)
   })
   ipcMain.handle('window:getPosition', () => mainWindow?.getPosition() ?? [0, 0])
   ipcMain.handle('window:setPosition', (_e, x: unknown, y: unknown) => {
