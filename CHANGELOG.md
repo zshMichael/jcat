@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.21
+
+- Each long-image block gives the mark and title more room from the left edge.
+
 ## 1.1.20
 
 - The long-image mark sits beside the title in the ink color, and switching the preview theme no longer flashes the editor behind the sheet.

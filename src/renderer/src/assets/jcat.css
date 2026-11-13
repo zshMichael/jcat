@@ -2234,12 +2234,14 @@ input[type='checkbox']:checked::after {
 .export-order button.is-drag {
   background: var(--active-row);
 }
+
+.export-card {
   min-width: 0;
   max-width: none;
   overflow: visible;
   background: #f6f1ea;
   color: #2c241b;
-  padding: 28px 32px 36px;
+  padding: 36px 44px 44px 56px;
   box-sizing: border-box;
 }
 
