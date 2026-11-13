@@ -1,6 +1,8 @@
 import { toPng } from 'html-to-image'
 import type * as Monaco from 'monaco-editor'
 import { cardWidthForCode, expandExportTabs, pngScaleToMaxWidth } from '@shared/exportLayout'
+import type { ThemeId } from '@shared/types'
+import { editorGutterColor, monacoThemeName } from './theme'
 import { catMarkSrc } from '../theme/catMark'
 
 const CHUNK = 90
@@ -32,6 +34,8 @@ export type HomeworkMeta = {
   cardLabel: string
   compileLabel: string
   runLabel: string
+  themeId: ThemeId
+  editorTheme: ThemeId
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -109,12 +113,12 @@ async function fitPng(dataUrl: string): Promise<string> {
   return canvas.toDataURL('image/png')
 }
 
-function numbered(html: string, start: number, hideLines: boolean): string {
+function numbered(html: string, start: number, hideLines: boolean, gutter: string): string {
   const parts = html.split(/<br\s*\/?>/i)
   return parts
     .map((line, i) => {
       const n = start + i
-      const num = hideLines ? '' : `<span class="n">${n}</span>`
+      const num = hideLines ? '' : `<span class="n" style="color:${gutter}">${n}</span>`
       return `<div class="export-line">${num}<span class="c">${line || '&nbsp;'}</span></div>`
     })
     .join('')
@@ -153,7 +157,7 @@ export async function renderCodePng(
 
   for (let i = 0; i < lines.length; i += CHUNK) {
     const slice = lines.slice(i, i + CHUNK).join('\n')
-    const colorized = await monaco.editor.colorize(slice, 'java', {})
+    const colorized = await monaco.editor.colorize(slice, 'java', { tabSize: 4 })
     const card = document.createElement('div')
     card.className = 'export-card'
     card.style.width = `${cardWidth}px`
@@ -171,7 +175,7 @@ export async function renderCodePng(
           </div>`
         : ''
     const foot = i + CHUNK >= lines.length && runParts[0] ? runBlock(runParts[0], true) : ''
-    card.innerHTML = `${head}<div class="export-code" style="color:${meta.ink}">${numbered(colorized, i + 1, meta.hideLines)}</div>${foot}`
+    card.innerHTML = `${head}<div class="export-code" style="color:${meta.ink}">${numbered(colorized, i + 1, meta.hideLines, editorGutterColor(meta.themeId))}</div>${foot}`
     await capture(card)
   }
 
@@ -194,23 +198,30 @@ export async function renderExportPng(
   pieces: ExportPiece[],
   meta: Omit<HomeworkMeta, 'className' | 'fileName' | 'compileOk' | 'runExcerpt'> & {
     direction: ExportDirection
+    themeId: ThemeId
+    editorTheme: ThemeId
   }
 ): Promise<string> {
-  const urls: string[] = []
-  for (const piece of pieces) {
-    if (!piece.code.trim()) continue
-    urls.push(
-      await renderCodePng(monaco, piece.code, {
-        ...meta,
-        className: piece.className,
-        fileName: piece.fileName,
-        compileOk: piece.compileOk,
-        runExcerpt: piece.runExcerpt
-      })
-    )
+  monaco.editor.setTheme(monacoThemeName(meta.themeId))
+  try {
+    const urls: string[] = []
+    for (const piece of pieces) {
+      if (!piece.code.trim()) continue
+      urls.push(
+        await renderCodePng(monaco, piece.code, {
+          ...meta,
+          className: piece.className,
+          fileName: piece.fileName,
+          compileOk: piece.compileOk,
+          runExcerpt: piece.runExcerpt
+        })
+      )
+    }
+    if (urls.length === 0) throw new Error('没有可导出的代码')
+    return fitPng(await stitch(urls, meta.paper, meta.direction, urls.length > 1 ? 28 : 0))
+  } finally {
+    monaco.editor.setTheme(monacoThemeName(meta.editorTheme))
   }
-  if (urls.length === 0) throw new Error('没有可导出的代码')
-  return fitPng(await stitch(urls, meta.paper, meta.direction, urls.length > 1 ? 28 : 0))
 }
 
 function escapeHtml(text: string): string {

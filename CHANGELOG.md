@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.19
+
+- The long-image preview sits further inside the sheet, with rounded corners. Toggles update immediately, and the picture uses the same colors, logo, and theme name as the IDE.
+
 ## 1.1.18
 
 - Saving a long image opens a golden-ratio sheet. The preview fits the code and starts in the current theme; another theme changes only the picture. You can hide line numbers, join the project vertically or horizontally, and drag the files into order.

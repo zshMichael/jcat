@@ -191,6 +191,10 @@ export function monacoThemeName(id: ThemeId): string {
   return `jcat-${id}`
 }
 
+export function editorGutterColor(id: ThemeId): string {
+  return `#${EDITOR[id].lineActive}`
+}
+
 export function defineJcatThemes(monaco: typeof Monaco): void {
   for (const [id, t] of Object.entries(EDITOR) as Array<[ThemeId, EditorTheme]>) {
     const rules: Monaco.editor.ITokenThemeRule[] = [

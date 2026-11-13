@@ -13,9 +13,9 @@ describe('exportLayout', () => {
     assert.equal(cardWidthForCode(1600, false) > EXPORT_MIN_CARD_WIDTH, true)
   })
 
-  it('lets a short file stay near its own width', () => {
+  it('keeps the old card wide enough for the header', () => {
     assert.equal(cardWidthForCode(100, false), EXPORT_MIN_CARD_WIDTH)
-    assert.equal(EXPORT_MIN_CARD_WIDTH < 880, true)
+    assert.equal(EXPORT_MIN_CARD_WIDTH, 880)
   })
 
   it('omits the line-number gutter when lines are hidden', () => {

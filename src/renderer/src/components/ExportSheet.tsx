@@ -122,42 +122,47 @@ export function ExportSheet({
     .filter((file): file is ExportSource => !!file)
   const pieceKey = ordered.map((file) => `${file.path}:${file.code.length}`).join('|')
   const paint = THEME_CARDS.find((card) => card.id === previewTheme) ?? THEME_CARDS[0]
-  const previewThemeName = themeNames[paint.id]
 
   useEffect(() => {
     if (!open || !monaco || ordered.length === 0) return
     let cancel = false
-    const pieces = ordered.map((file) => ({
-      fileName: file.name,
-      className: publicClassInfo(file.code)?.name || file.name.replace(/\.java$/i, ''),
-      code: file.code,
-      compileOk: file.path === active?.path ? compileOk : null,
-      runExcerpt: includeRun && file.path === active?.path ? runExcerpt : ''
-    }))
-    void (async () => {
-      setBusy(true)
-      try {
-        const url = await renderExportPng(monaco, pieces, {
-          hideLines,
-          paper: paint.swatches[0],
-          ink: paint.swatches[1],
-          accent: paint.swatches[2],
-          muted: paint.swatches[3],
-          themeName: previewThemeName,
-          cardLabel,
-          compileLabel,
-          runLabel,
-          direction
-        })
-        if (!cancel) setPreview(url)
-      } catch {
-        if (!cancel) setPreview('')
-      } finally {
-        if (!cancel) setBusy(false)
-      }
-    })()
+    const timer = window.setTimeout(() => {
+      if (cancel) return
+      const pieces = ordered.map((file) => ({
+        fileName: file.name,
+        className: publicClassInfo(file.code)?.name || file.name.replace(/\.java$/i, ''),
+        code: file.code,
+        compileOk: file.path === active?.path ? compileOk : null,
+        runExcerpt: includeRun && file.path === active?.path ? runExcerpt : ''
+      }))
+      void (async () => {
+        setBusy(true)
+        try {
+          const url = await renderExportPng(monaco, pieces, {
+            hideLines,
+            paper: paint.swatches[0],
+            ink: paint.swatches[1],
+            accent: paint.swatches[2],
+            muted: paint.swatches[3],
+            themeName: paint.name,
+            themeId: paint.id,
+            editorTheme: initialTheme,
+            cardLabel,
+            compileLabel,
+            runLabel,
+            direction
+          })
+          if (!cancel) setPreview(url)
+        } catch {
+          if (!cancel) setPreview('')
+        } finally {
+          if (!cancel) setBusy(false)
+        }
+      })()
+    }, 160)
     return () => {
       cancel = true
+      window.clearTimeout(timer)
     }
     // pieceKey captures the ordered sources. `ordered` is a fresh array each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -173,7 +178,6 @@ export function ExportSheet({
     open,
     pieceKey,
     previewTheme,
-    previewThemeName,
     runExcerpt,
     runLabel
   ])
@@ -234,7 +238,9 @@ export function ExportSheet({
       <div className="export-sheet-body">
         <div className="export-preview">
           {preview ? (
-            <img src={preview} alt={labels.title} />
+            <div className="export-preview-frame">
+              <img src={preview} alt={labels.title} />
+            </div>
           ) : (
             <p>{busy ? labels.rendering : labels.empty}</p>
           )}
