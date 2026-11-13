@@ -195,6 +195,26 @@ export function editorGutterColor(id: ThemeId): string {
   return `#${EDITOR[id].lineActive}`
 }
 
+export function exportTokenStyle(
+  id: ThemeId,
+  tokenType: string
+): { color: string; italic: boolean } {
+  const theme = EDITOR[id]
+  const kind = tokenType.toLowerCase()
+  const hex = (value: string): string => (value.startsWith('#') ? value : `#${value}`)
+  if (kind.includes('comment')) return { color: hex(theme.comment), italic: true }
+  if (kind.includes('string')) return { color: hex(theme.string), italic: false }
+  if (kind.includes('keyword')) return { color: hex(theme.keyword), italic: false }
+  if (kind.includes('number') || kind.includes('float'))
+    return { color: hex(theme.number), italic: false }
+  if (kind.includes('type')) return { color: hex(theme.type), italic: false }
+  if (kind.includes('delimiter') || kind.includes('operator') || kind.includes('bracket')) {
+    return { color: hex(theme.delimiter), italic: false }
+  }
+  if (theme.identifier) return { color: hex(theme.identifier), italic: false }
+  return { color: hex(theme.foreground), italic: false }
+}
+
 export function defineJcatThemes(monaco: typeof Monaco): void {
   for (const [id, t] of Object.entries(EDITOR) as Array<[ThemeId, EditorTheme]>) {
     const rules: Monaco.editor.ITokenThemeRule[] = [

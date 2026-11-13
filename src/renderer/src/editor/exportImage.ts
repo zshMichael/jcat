@@ -2,7 +2,7 @@ import { toPng } from 'html-to-image'
 import type * as Monaco from 'monaco-editor'
 import { cardWidthForCode, expandExportTabs, pngScaleToMaxWidth } from '@shared/exportLayout'
 import type { ThemeId } from '@shared/types'
-import { editorGutterColor, monacoThemeName } from './theme'
+import { editorGutterColor, exportTokenStyle } from './theme'
 import { catMarkSrc } from '../theme/catMark'
 
 const CHUNK = 90
@@ -35,7 +35,6 @@ export type HomeworkMeta = {
   compileLabel: string
   runLabel: string
   themeId: ThemeId
-  editorTheme: ThemeId
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -113,6 +112,42 @@ async function fitPng(dataUrl: string): Promise<string> {
   return canvas.toDataURL('image/png')
 }
 
+function colorizeJava(monaco: typeof Monaco, code: string, themeId: ThemeId): string {
+  const lines = code.split('\n')
+  const tokenLines = monaco.editor.tokenize(code, 'java')
+  return lines
+    .map((line, index) => {
+      const tokens = tokenLines[index] ?? []
+      if (!line) return '&nbsp;'
+      if (tokens.length === 0) return escapeHtml(line)
+      let html = ''
+      for (let i = 0; i < tokens.length; i += 1) {
+        const start = tokens[i].offset
+        const end = i + 1 < tokens.length ? tokens[i + 1].offset : line.length
+        const text = line.slice(start, end)
+        if (!text) continue
+        const style = exportTokenStyle(themeId, tokens[i].type)
+        html += `<span style="color:${style.color}${style.italic ? ';font-style:italic' : ''}">${escapeHtml(text)}</span>`
+      }
+      return html || '&nbsp;'
+    })
+    .join('<br/>')
+}
+
+async function inkMark(color: string): Promise<string> {
+  const img = await loadImage(catMarkSrc)
+  const canvas = document.createElement('canvas')
+  canvas.width = 44
+  canvas.height = 44
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return catMarkSrc
+  ctx.drawImage(img, 0, 0, 44, 44)
+  ctx.globalCompositeOperation = 'source-in'
+  ctx.fillStyle = color
+  ctx.fillRect(0, 0, 44, 44)
+  return canvas.toDataURL('image/png')
+}
+
 function numbered(html: string, start: number, hideLines: boolean, gutter: string): string {
   const parts = html.split(/<br\s*\/?>/i)
   return parts
@@ -155,9 +190,10 @@ export async function renderCodePng(
     )
   }
 
+  const mark = await inkMark(meta.ink)
   for (let i = 0; i < lines.length; i += CHUNK) {
     const slice = lines.slice(i, i + CHUNK).join('\n')
-    const colorized = await monaco.editor.colorize(slice, 'java', { tabSize: 4 })
+    const colorized = colorizeJava(monaco, slice, meta.themeId)
     const card = document.createElement('div')
     card.className = 'export-card'
     card.style.width = `${cardWidth}px`
@@ -166,7 +202,7 @@ export async function renderCodePng(
     const head =
       i === 0
         ? `<div class="export-head" style="border-color:${meta.muted}">
-            <img src="${catMarkSrc}" width="22" height="22" alt=""/>
+            <img src="${mark}" width="22" height="22" alt="" style="width:22px;height:22px;min-width:22px;flex:none;display:block"/>
             <div class="export-head-copy">
               <strong>${escapeHtml(meta.cardLabel)}</strong>
               <span>${escapeHtml(meta.className || meta.fileName)} · ${escapeHtml(meta.themeName)}</span>
@@ -199,29 +235,23 @@ export async function renderExportPng(
   meta: Omit<HomeworkMeta, 'className' | 'fileName' | 'compileOk' | 'runExcerpt'> & {
     direction: ExportDirection
     themeId: ThemeId
-    editorTheme: ThemeId
   }
 ): Promise<string> {
-  monaco.editor.setTheme(monacoThemeName(meta.themeId))
-  try {
-    const urls: string[] = []
-    for (const piece of pieces) {
-      if (!piece.code.trim()) continue
-      urls.push(
-        await renderCodePng(monaco, piece.code, {
-          ...meta,
-          className: piece.className,
-          fileName: piece.fileName,
-          compileOk: piece.compileOk,
-          runExcerpt: piece.runExcerpt
-        })
-      )
-    }
-    if (urls.length === 0) throw new Error('没有可导出的代码')
-    return fitPng(await stitch(urls, meta.paper, meta.direction, urls.length > 1 ? 28 : 0))
-  } finally {
-    monaco.editor.setTheme(monacoThemeName(meta.editorTheme))
+  const urls: string[] = []
+  for (const piece of pieces) {
+    if (!piece.code.trim()) continue
+    urls.push(
+      await renderCodePng(monaco, piece.code, {
+        ...meta,
+        className: piece.className,
+        fileName: piece.fileName,
+        compileOk: piece.compileOk,
+        runExcerpt: piece.runExcerpt
+      })
+    )
   }
+  if (urls.length === 0) throw new Error('没有可导出的代码')
+  return fitPng(await stitch(urls, meta.paper, meta.direction, urls.length > 1 ? 28 : 0))
 }
 
 function escapeHtml(text: string): string {

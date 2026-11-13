@@ -146,7 +146,6 @@ export function ExportSheet({
             muted: paint.swatches[3],
             themeName: paint.name,
             themeId: paint.id,
-            editorTheme: initialTheme,
             cardLabel,
             compileLabel,
             runLabel,

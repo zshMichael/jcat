@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.20
+
+- The long-image mark sits beside the title in the ink color, and switching the preview theme no longer flashes the editor behind the sheet.
+
 ## 1.1.19
 
 - The long-image preview sits further inside the sheet, with rounded corners. Toggles update immediately, and the picture uses the same colors, logo, and theme name as the IDE.

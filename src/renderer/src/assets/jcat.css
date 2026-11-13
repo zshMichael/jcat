@@ -2246,12 +2246,21 @@ input[type='checkbox']:checked::after {
 .export-head {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 10px;
   margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid #d9cfc3;
   font-family: var(--serif);
   font-size: 18px;
+}
+
+.export-head img {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  flex: none;
+  display: block;
 }
 
 .export-head-copy {
