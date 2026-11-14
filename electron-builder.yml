@@ -65,20 +65,25 @@ dmg:
   iconSize: 72
   window:
     width: 640
-    height: 520
+    height: 560
   contents:
-    - x: 320
-      y: 248
+    - x: 180
+      y: 175
+      type: file
+    - x: 460
+      y: 175
+      type: link
+      path: /Applications
+    - x: 180
+      y: 430
       type: file
       path: build/复制命令.app
       name: 复制命令.app
-    - x: 180
-      y: 400
-      type: file
     - x: 460
-      y: 400
+      y: 430
       type: link
-      path: /Applications
+      path: /System/Applications/Utilities/Terminal.app
+      name: 终端
 linux:
   target:
     - AppImage
