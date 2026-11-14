@@ -75,12 +75,12 @@ dmg:
       type: link
       path: /Applications
     - x: 180
-      y: 430
+      y: 416
       type: file
       path: build/复制命令.app
       name: 复制命令.app
     - x: 460
-      y: 430
+      y: 416
       type: link
       path: /System/Applications/Utilities/Terminal.app
       name: 终端
