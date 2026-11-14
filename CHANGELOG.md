@@ -2,7 +2,7 @@
 
 ## 1.2.1
 
-- The Mac disk image includes a note with the command to clear the download flag before the first open.
+- The Mac disk image window shows the command to clear the download flag before the first open.
 
 ## 1.2.0
 

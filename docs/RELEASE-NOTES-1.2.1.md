@@ -6,7 +6,7 @@
 
 ## 中文
 
-Mac 安装包窗口里有一份「先读我」。把 Jcat 拖进「应用程序」后，在终端执行：
+Mac 安装窗口上直接写着这一步。把 Jcat 拖进「应用程序」后，在终端执行：
 
 ```
 xattr -cr /Applications/Jcat.app
@@ -23,7 +23,7 @@ xattr -cr /Applications/Jcat.app
 
 ## English
 
-The Mac disk image includes a note. After dragging Jcat to Applications, run:
+The Mac disk image window shows this step. After dragging Jcat to Applications, run:
 
 ```
 xattr -cr /Applications/Jcat.app
@@ -40,7 +40,7 @@ Installers:
 
 ## 한국어
 
-Mac 설치 창에 안내 파일이 있습니다. Jcat을 응용 프로그램으로 옮긴 뒤 터미널에서 실행합니다.
+Mac 설치 창에 단계가 적혀 있습니다. Jcat을 응용 프로그램으로 옮긴 뒤 터미널에서 실행합니다.
 
 ```
 xattr -cr /Applications/Jcat.app

@@ -61,22 +61,19 @@ mac:
     - dmg
 dmg:
   artifactName: ${name}-${version}.${ext}
+  background: dmg-background.png
+  iconSize: 80
   window:
-    width: 540
-    height: 460
+    width: 640
+    height: 400
   contents:
-    - x: 140
-      y: 280
+    - x: 170
+      y: 150
       type: file
-    - x: 400
-      y: 280
+    - x: 470
+      y: 150
       type: link
       path: /Applications
-    - x: 270
-      y: 110
-      type: file
-      path: build/先读我.txt
-      name: 先读我.txt
 linux:
   target:
     - AppImage

@@ -25,7 +25,7 @@
 | Windows ARM64 | `jcat-1.2.1-arm64-setup.exe` |
 | Windows 自动识别（含 x64 与 ARM64） | `jcat-1.2.1-setup.exe` |
 
-macOS：把 Jcat 拖进「应用程序」后，打开终端，粘贴 `xattr -cr /Applications/Jcat.app` 再回车。安装包窗口里的「先读我」是同样的步骤。系统若说文件已损坏，点取消，不要移到废纸篓。升级时换掉 `/Applications/Jcat.app` 即可，设置和 Key 还在。
+macOS：安装窗口上写着这一步。把 Jcat 拖进「应用程序」后，打开终端，粘贴 `xattr -cr /Applications/Jcat.app` 再回车。系统若说文件已损坏，点取消，不要移到废纸篓。升级时换掉 `/Applications/Jcat.app` 即可，设置和 Key 还在。
 
 Windows 若出现 SmartScreen，选「仍要运行」。不用先卸载，覆盖安装就行。`jcat-1.2.1-x64-setup.exe` 和 `jcat-1.2.1-arm64-setup.exe` 各只含一种架构。`jcat-1.2.1-setup.exe` 里两种都有，安装时按系统选择。
 
@@ -90,7 +90,7 @@ Download from [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.2.1)
 | Windows ARM64 | `jcat-1.2.1-arm64-setup.exe` |
 | Windows auto (x64 + ARM64) | `jcat-1.2.1-setup.exe` |
 
-On macOS, drag Jcat to Applications, then run `xattr -cr /Applications/Jcat.app` in Terminal. The DMG window includes the same note. If macOS says the app is damaged, click Cancel. Replacing `/Applications/Jcat.app` upgrades in place. Settings and the key stay.
+On macOS, the disk image window shows the step. Drag Jcat to Applications, then run `xattr -cr /Applications/Jcat.app` in Terminal. If macOS says the app is damaged, click Cancel. Replacing `/Applications/Jcat.app` upgrades in place. Settings and the key stay.
 
 On Windows, if SmartScreen appears, choose Run anyway. You do not need to uninstall first. The x64 and ARM64 installers each contain one architecture. `jcat-1.2.1-setup.exe` contains both and picks at install time.
 
@@ -155,7 +155,7 @@ Jcat은 AP CSA용 로컬 Java IDE입니다. 컴파일과 실행은 이 컴퓨터
 | Windows ARM64 | `jcat-1.2.1-arm64-setup.exe` |
 | Windows 자동 인식(x64 + ARM64) | `jcat-1.2.1-setup.exe` |
 
-macOS에서는 Jcat을 응용 프로그램으로 옮긴 뒤, 터미널에 `xattr -cr /Applications/Jcat.app` 를 붙여 넣고 실행합니다. 설치 창의 안내 파일에도 같은 내용이 있습니다. 파일이 손상되었다는 창이 뜨면 취소를 누르세요. `/Applications/Jcat.app`만 바꾸면 업그레이드되고, 설정과 Key는 남습니다.
+macOS에서는 설치 창에 단계가 적혀 있습니다. Jcat을 응용 프로그램으로 옮긴 뒤, 터미널에 `xattr -cr /Applications/Jcat.app` 를 붙여 넣고 실행합니다. 손상되었다는 창이 뜨면 취소를 누르세요. `/Applications/Jcat.app`만 바꾸면 업그레이드되고, 설정과 Key는 남습니다.
 
 Windows에서 SmartScreen이 뜨면 그래도 실행을 고릅니다. 먼저 제거할 필요는 없습니다. x64 설치 파일과 ARM64 설치 파일은 각자 하나의 아키텍처만 담습니다. `jcat-1.2.1-setup.exe`는 둘 다 들어 있고, 설치할 때 시스템에 맞는 쪽을 고릅니다.
 
