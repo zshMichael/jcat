@@ -2,7 +2,7 @@
 
 ## 1.2.1
 
-- The Mac disk image window shows the first-open command, and “复制命令” copies it.
+- The Mac disk image gives two steps: drag Jcat into Applications, then copy the command and paste it in Terminal.
 
 ## 1.2.0
 
