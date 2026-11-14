@@ -14,20 +14,20 @@
 
 补写和 AI Debug 用 DeepSeek。只有你打开它们的时候，相关代码才会直接发给 DeepSeek。不填 API Key 也可以编译运行。Jcat 没有自己的服务器。
 
-### 安装 1.2.0
+### 安装 1.2.1
 
-到 [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.2.0) 下载。每个发布里有 `SHA256SUMS.txt`，可以核对文件的 SHA-256。安装包没有 Apple 公证，也没有 Windows 签名。
+到 [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.2.1) 下载。每个发布里有 `SHA256SUMS.txt`，可以核对文件的 SHA-256。安装包没有 Apple 公证，也没有 Windows 签名。
 
 | 系统 | 文件 |
 | --- | --- |
-| macOS Apple Silicon | `jcat-1.2.0.dmg` |
-| Windows x64 | `jcat-1.2.0-x64-setup.exe` |
-| Windows ARM64 | `jcat-1.2.0-arm64-setup.exe` |
-| Windows 自动识别（含 x64 与 ARM64） | `jcat-1.2.0-setup.exe` |
+| macOS Apple Silicon | `jcat-1.2.1.dmg` |
+| Windows x64 | `jcat-1.2.1-x64-setup.exe` |
+| Windows ARM64 | `jcat-1.2.1-arm64-setup.exe` |
+| Windows 自动识别（含 x64 与 ARM64） | `jcat-1.2.1-setup.exe` |
 
-macOS 第一次打开：在访达里右键 Jcat，选「打开」。升级时换掉 `/Applications/Jcat.app` 即可，设置和 Key 还在。
+macOS：把 Jcat 拖进「应用程序」后，打开终端，粘贴 `xattr -cr /Applications/Jcat.app` 再回车。安装包窗口里的「先读我」是同样的步骤。系统若说文件已损坏，点取消，不要移到废纸篓。升级时换掉 `/Applications/Jcat.app` 即可，设置和 Key 还在。
 
-Windows 若出现 SmartScreen，选「仍要运行」。不用先卸载，覆盖安装就行。`jcat-1.2.0-x64-setup.exe` 和 `jcat-1.2.0-arm64-setup.exe` 各只含一种架构。`jcat-1.2.0-setup.exe` 里两种都有，安装时按系统选择。
+Windows 若出现 SmartScreen，选「仍要运行」。不用先卸载，覆盖安装就行。`jcat-1.2.1-x64-setup.exe` 和 `jcat-1.2.1-arm64-setup.exe` 各只含一种架构。`jcat-1.2.1-setup.exe` 里两种都有，安装时按系统选择。
 
 卸载不会删除你的工程，默认也不删除应用数据。
 
@@ -79,20 +79,20 @@ Ghost write continues what you are typing in grey. Tab accepts it. AI Debug talk
 
 Ghost write and AI Debug call DeepSeek. Code is sent only after you turn one of them on. Compile and run work without an API key. Jcat has no server of its own.
 
-### Install 1.2.0
+### Install 1.2.1
 
-Download from [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.2.0). Each release includes `SHA256SUMS.txt`. These builds are not notarized on macOS and not signed on Windows.
+Download from [Releases](https://github.com/zshMichael/jcat/releases/tag/v1.2.1). Each release includes `SHA256SUMS.txt`. These builds are not notarized on macOS and not signed on Windows.
 
 | OS | File |
 | --- | --- |
-| macOS Apple Silicon | `jcat-1.2.0.dmg` |
-| Windows x64 | `jcat-1.2.0-x64-setup.exe` |
-| Windows ARM64 | `jcat-1.2.0-arm64-setup.exe` |
-| Windows auto (x64 + ARM64) | `jcat-1.2.0-setup.exe` |
+| macOS Apple Silicon | `jcat-1.2.1.dmg` |
+| Windows x64 | `jcat-1.2.1-x64-setup.exe` |
+| Windows ARM64 | `jcat-1.2.1-arm64-setup.exe` |
+| Windows auto (x64 + ARM64) | `jcat-1.2.1-setup.exe` |
 
-On macOS, the first launch is right-click Jcat in Finder and choose Open. Replacing `/Applications/Jcat.app` upgrades in place. Settings and the key stay.
+On macOS, drag Jcat to Applications, then run `xattr -cr /Applications/Jcat.app` in Terminal. The DMG window includes the same note. If macOS says the app is damaged, click Cancel. Replacing `/Applications/Jcat.app` upgrades in place. Settings and the key stay.
 
-On Windows, if SmartScreen appears, choose Run anyway. You do not need to uninstall first. The x64 and ARM64 installers each contain one architecture. `jcat-1.2.0-setup.exe` contains both and picks at install time.
+On Windows, if SmartScreen appears, choose Run anyway. You do not need to uninstall first. The x64 and ARM64 installers each contain one architecture. `jcat-1.2.1-setup.exe` contains both and picks at install time.
 
 Uninstall does not delete your projects, and it leaves app data in place.
 
@@ -144,20 +144,20 @@ Jcat은 AP CSA용 로컬 Java IDE입니다. 컴파일과 실행은 이 컴퓨터
 
 보강 입력과 AI Debug는 DeepSeek를 씁니다. 둘 중 하나를 켠 다음에야 관련 코드가 DeepSeek로 갑니다. API Key 없이도 컴파일과 실행은 됩니다. Jcat 자체 서버는 없습니다.
 
-### 1.2.0 설치
+### 1.2.1 설치
 
-[Releases](https://github.com/zshMichael/jcat/releases/tag/v1.2.0)에서 받습니다. 릴리스마다 `SHA256SUMS.txt`가 있습니다. macOS 공증과 Windows 서명은 없습니다.
+[Releases](https://github.com/zshMichael/jcat/releases/tag/v1.2.1)에서 받습니다. 릴리스마다 `SHA256SUMS.txt`가 있습니다. macOS 공증과 Windows 서명은 없습니다.
 
 | OS | 파일 |
 | --- | --- |
-| macOS Apple Silicon | `jcat-1.2.0.dmg` |
-| Windows x64 | `jcat-1.2.0-x64-setup.exe` |
-| Windows ARM64 | `jcat-1.2.0-arm64-setup.exe` |
-| Windows 자동 인식(x64 + ARM64) | `jcat-1.2.0-setup.exe` |
+| macOS Apple Silicon | `jcat-1.2.1.dmg` |
+| Windows x64 | `jcat-1.2.1-x64-setup.exe` |
+| Windows ARM64 | `jcat-1.2.1-arm64-setup.exe` |
+| Windows 자동 인식(x64 + ARM64) | `jcat-1.2.1-setup.exe` |
 
-macOS에서 처음 열 때는 Finder에서 Jcat을 우클릭하고 열기를 고릅니다. `/Applications/Jcat.app`만 바꾸면 업그레이드되고, 설정과 Key는 남습니다.
+macOS에서는 Jcat을 응용 프로그램으로 옮긴 뒤, 터미널에 `xattr -cr /Applications/Jcat.app` 를 붙여 넣고 실행합니다. 설치 창의 안내 파일에도 같은 내용이 있습니다. 파일이 손상되었다는 창이 뜨면 취소를 누르세요. `/Applications/Jcat.app`만 바꾸면 업그레이드되고, 설정과 Key는 남습니다.
 
-Windows에서 SmartScreen이 뜨면 그래도 실행을 고릅니다. 먼저 제거할 필요는 없습니다. x64 설치 파일과 ARM64 설치 파일은 각자 하나의 아키텍처만 담습니다. `jcat-1.2.0-setup.exe`는 둘 다 들어 있고, 설치할 때 시스템에 맞는 쪽을 고릅니다.
+Windows에서 SmartScreen이 뜨면 그래도 실행을 고릅니다. 먼저 제거할 필요는 없습니다. x64 설치 파일과 ARM64 설치 파일은 각자 하나의 아키텍처만 담습니다. `jcat-1.2.1-setup.exe`는 둘 다 들어 있고, 설치할 때 시스템에 맞는 쪽을 고릅니다.
 
 앱을 지워도 프로젝트 폴더는 지워지지 않습니다. 앱 데이터도 기본으로는 남습니다.
 

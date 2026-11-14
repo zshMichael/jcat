@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- The Mac disk image includes a note with the command to clear the download flag before the first open.
+
 ## 1.2.0
 
 1.1.2 through 1.1.25 were small fixes. They are included here instead of listed one by one.
