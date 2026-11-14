@@ -2,7 +2,7 @@
 
 ## 1.2.1
 
-- The Mac disk image window shows the command to clear the download flag before the first open.
+- The Mac disk image window shows the first-open command, and “复制命令” copies it.
 
 ## 1.2.0
 

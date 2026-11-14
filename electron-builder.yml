@@ -62,16 +62,21 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
   background: dmg-background.png
-  iconSize: 80
+  iconSize: 72
   window:
     width: 640
-    height: 400
+    height: 520
   contents:
-    - x: 170
-      y: 150
+    - x: 320
+      y: 248
       type: file
-    - x: 470
-      y: 150
+      path: build/复制命令.app
+      name: 复制命令.app
+    - x: 180
+      y: 400
+      type: file
+    - x: 460
+      y: 400
       type: link
       path: /Applications
 linux:

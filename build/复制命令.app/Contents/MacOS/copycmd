@@ -1,0 +1,3 @@
+#!/bin/bash
+printf '%s' 'xattr -cr /Applications/Jcat.app' | pbcopy
+osascript -e 'display dialog "已复制到剪贴板。打开「终端」，粘贴后回车。" buttons {"好"} default button 1 with title "Jcat"'
